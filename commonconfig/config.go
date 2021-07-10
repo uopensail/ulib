@@ -33,3 +33,21 @@ type RedisConfig struct {
 	ReadTimeout        int            `toml:"read_timeout"`
 	DialTimout         int            `toml:"dial_timeout"`
 }
+
+type FinderConfig struct {
+	Type      string            `toml:"type"`
+	Timeout   int               `toml:"timeout"`
+	Endpoint  string            `toml:"endpoint"`
+	Region    string            `toml:"region"`
+	AccessKey string            `toml:"access_key"`
+	SecretKey string            `toml:"secret_key"`
+	Extra     map[string]string `toml:"extra"`
+}
+
+type DownloaderConfig struct {
+	FinderConfig
+	Source   string            `toml:"source"`
+	Local    string            `toml:"local"`
+	Interval int               `toml:"interval"`
+	Extra    map[string]string `toml:"extra"`
+}

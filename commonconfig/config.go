@@ -35,13 +35,12 @@ type RedisConfig struct {
 }
 
 type FinderConfig struct {
-	Type      string            `toml:"type"`
-	Timeout   int               `toml:"timeout"`
-	Endpoint  string            `toml:"endpoint"`
-	Region    string            `toml:"region"`
-	AccessKey string            `toml:"access_key"`
-	SecretKey string            `toml:"secret_key"`
-	Extra     map[string]string `toml:"extra"`
+	Type      string `toml:"type"`
+	Timeout   int    `toml:"timeout"`
+	Endpoint  string `toml:"endpoint"`
+	Region    string `toml:"region"`
+	AccessKey string `toml:"access_key"`
+	SecretKey string `toml:"secret_key"`
 }
 
 type DownloaderConfig struct {

@@ -16,6 +16,8 @@ func GetFinder(cfg *commonconfig.FinderConfig) IFinder {
 		return NewS3Finder(cfg)
 	case "oss":
 		return NewOSSFinder(cfg)
+	case "local":
+		return NewLocalFinder(cfg)
 	default:
 		return nil
 	}

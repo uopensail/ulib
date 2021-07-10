@@ -27,6 +27,7 @@ type ITable interface {
 type CreateFunc func(interface{}) ITable
 
 type Job struct {
+	Key            string
 	Finder         finder.IFinder
 	Interval       int
 	LastUpdateTime int64
@@ -48,10 +49,11 @@ func init() {
 
 func Register(key string, cfg *commonconfig.DownloaderConfig, factory CreateFunc, params interface{}) bool {
 	interval := 30
-	if cfg.Interval > interval {
+	if cfg.Interval > 0 {
 		interval = cfg.Interval
 	}
 	record := &Job{
+		Key:            key,
 		Interval:       interval,
 		Finder:         finder.GetFinder(&cfg.FinderConfig),
 		LastUpdateTime: 0,
@@ -90,7 +92,12 @@ func Register(key string, cfg *commonconfig.DownloaderConfig, factory CreateFunc
 				continue
 			case LocalFileIsNewest:
 				record.LastUpdateTime = remoteUpdateTime
-				prome.NewStat(fmt.Sprintf("Loader.%s", key)).MarkOk().End()
+				prome.NewStat(fmt.Sprintf("Loader.%s", r.Key)).MarkOk().End()
+				zlog.LOG.Info(fmt.Sprintf("Loader: %s do not need reload", r.Key),
+					zap.String("source", cfg.SourcePath),
+					zap.String("local", cfg.LocalPath),
+					zap.Int64("updateTime", remoteUpdateTime),
+				)
 				continue
 			}
 
@@ -99,8 +106,12 @@ func Register(key string, cfg *commonconfig.DownloaderConfig, factory CreateFunc
 			ManagerImp.TableMap[key] = table
 			ManagerImp.Locker.Unlock()
 			r.LastUpdateTime = realUpdateTime
-			prome.NewStat(fmt.Sprintf("Loader.%s", key)).MarkOk().End()
-			zlog.LOG.Info("Loader", zap.String("source", cfg.SourcePath), zap.String("local", cfg.LocalPath))
+			prome.NewStat(fmt.Sprintf("Loader.%s", r.Key)).MarkOk().End()
+			zlog.LOG.Info(fmt.Sprintf("Loader: %s reload", r.Key),
+				zap.String("source", cfg.SourcePath),
+				zap.String("local", cfg.LocalPath),
+				zap.Int64("updateTime", remoteUpdateTime),
+			)
 		}
 	}(record)
 	return true

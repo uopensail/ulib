@@ -12,3 +12,11 @@ func FilePathExists(path string) bool {
 	}
 	return true
 }
+
+func GetFileModifyTime(fileName string) int64 {
+	info, err := os.Stat(fileName)
+	if err != nil {
+		return -1
+	}
+	return info.ModTime().Unix()
+}

@@ -55,3 +55,12 @@ func GetUInt64Param(param map[string]string, key string, defaultVal uint64) uint
 	}
 	return defaultVal
 }
+
+func GetStringParam(param map[string]string, key string, defaultVal string) string {
+	if v, ok := param[key]; ok {
+		return v
+	}
+	return defaultVal
+}
+
+

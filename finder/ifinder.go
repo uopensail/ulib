@@ -8,6 +8,7 @@ type IFinder interface {
 	ListDir(dir string) ([]string, error)
 	Download(src, dst string) (int64, error)
 	GetUpdateTime(filepath string) int64
+	GetMD5(filepath string) string
 }
 
 func GetFinder(cfg *commonconfig.FinderConfig) IFinder {

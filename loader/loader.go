@@ -21,10 +21,11 @@ const (
 	DownloadFileError
 )
 
-type ITable interface {
-}
+type ITable interface{}
 
 type CreateFunc func(interface{}) ITable
+
+type ReleaseFunc func(ITable, interface{})
 
 type Job struct {
 	Key            string
@@ -47,7 +48,8 @@ func init() {
 	}
 }
 
-func Register(key string, cfg *commonconfig.DownloaderConfig, factory CreateFunc, params interface{}) bool {
+func Register(key string, cfg *commonconfig.DownloaderConfig, factory CreateFunc,
+	release ReleaseFunc, createParams, releaseParams interface{}) bool {
 	interval := 30
 	if cfg.Interval > 0 {
 		interval = cfg.Interval
@@ -67,7 +69,7 @@ func Register(key string, cfg *commonconfig.DownloaderConfig, factory CreateFunc
 		return false
 	}
 	//加载table
-	table := factory(params)
+	table := factory(createParams)
 	ManagerImp.Locker.Lock()
 	ManagerImp.TableMap[key] = table
 	ManagerImp.JobMap[key] = record
@@ -80,6 +82,12 @@ func Register(key string, cfg *commonconfig.DownloaderConfig, factory CreateFunc
 			<-ticker.C
 			realUpdateTime := r.Finder.GetUpdateTime(cfg.SourcePath)
 			if realUpdateTime < r.LastUpdateTime {
+				prome.NewStat(fmt.Sprintf("Loader.%s", r.Key)).MarkOk().End()
+				zlog.LOG.Info(fmt.Sprintf("Loader: %s do not need reload", r.Key),
+					zap.String("source", cfg.SourcePath),
+					zap.String("local", cfg.LocalPath),
+					zap.Int64("updateTime", remoteUpdateTime),
+				)
 				continue
 			}
 
@@ -101,10 +109,20 @@ func Register(key string, cfg *commonconfig.DownloaderConfig, factory CreateFunc
 				continue
 			}
 
-			table = factory(params)
+			table = factory(createParams)
 			ManagerImp.Locker.Lock()
+			old, ok := ManagerImp.TableMap[key]
 			ManagerImp.TableMap[key] = table
 			ManagerImp.Locker.Unlock()
+
+			if ok {
+				//延迟释放
+				go func(obj ITable, p interface{}) {
+					time.Sleep(time.Second)
+					release(obj, p)
+				}(old, releaseParams)
+			}
+
 			r.LastUpdateTime = realUpdateTime
 			prome.NewStat(fmt.Sprintf("Loader.%s", r.Key)).MarkOk().End()
 			zlog.LOG.Info(fmt.Sprintf("Loader: %s reload", r.Key),
@@ -127,25 +145,27 @@ func GetTable(key string) ITable {
 }
 
 func download(finder finder.IFinder, remotePath, localPath string) (Status, int64) {
-	localUpdateTime := utils.GetFileModifyTime(localPath)
+	localMD5 := utils.GetMD5(localPath)
+	remoteMD5 := finder.GetMD5(remotePath)
 	remoteUpdateTime := finder.GetUpdateTime(remotePath)
 	//远程找不到文件注册出错
-	if remoteUpdateTime == -1 {
+	if len(remoteMD5) == 0 {
 		zlog.LOG.Error(fmt.Sprintf("Get %s Modify Time error", remotePath))
 		return RemoteFileError, -1
 	}
 
-	//远程的文件更新了，或者本地没有文件
-	if remoteUpdateTime > localUpdateTime {
-		//下载文件
-		size, err := finder.Download(remotePath, localPath)
-		if err != nil || size == 0 {
-			zlog.LOG.Error(fmt.Sprintf("DownLoader %s error", remotePath))
-			return DownloadFileError, -1
-		}
-		return DownloadOK, remoteUpdateTime
+	//不需要下载
+	if remoteMD5 == localMD5 {
+		return LocalFileIsNewest, remoteUpdateTime
 	}
-	return LocalFileIsNewest, remoteUpdateTime
+
+	//下载文件
+	size, err := finder.Download(remotePath, localPath)
+	if err != nil || size == 0 {
+		zlog.LOG.Error(fmt.Sprintf("DownLoader %s error", remotePath))
+		return DownloadFileError, -1
+	}
+	return DownloadOK, remoteUpdateTime
 }
 
 var ManagerImp *Manager

@@ -34,3 +34,9 @@ func (finder *LocalFinder) GetUpdateTime(filepath string) int64 {
 	defer stat.End()
 	return utils.GetFileModifyTime(filepath)
 }
+
+func (finder *LocalFinder) GetMD5(filepath string) string {
+	stat := prome.NewStat("LocalFinder.GetMD5")
+	defer stat.End()
+	return utils.GetMD5(filepath)
+}

@@ -163,3 +163,30 @@ func (finder *S3Finder) GetUpdateTime(filepath string) int64 {
 	}
 	return object.LastModified.Unix()
 }
+
+func (finder *S3Finder) GetMD5(filepath string) string {
+	stat := prome.NewStat("S3Finder.GetMD5")
+	defer stat.End()
+	bucket, err := finder.getBucket(filepath)
+	if err != nil {
+		stat.MarkErr()
+		return ""
+	}
+	path, err := finder.getPath(filepath)
+	if err != nil {
+		stat.MarkErr()
+		return ""
+	}
+	client := s3.New(finder.Session)
+	object, err := client.HeadObject(
+		&s3.HeadObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(path),
+		})
+	if err != nil {
+		stat.MarkErr()
+		return ""
+	}
+	md5 := *object.ETag
+	return md5[1 : len(md5)-1]
+}

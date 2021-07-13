@@ -35,8 +35,8 @@ func (finder *LocalFinder) GetUpdateTime(filepath string) int64 {
 	return utils.GetFileModifyTime(filepath)
 }
 
-func (finder *LocalFinder) GetMD5(filepath string) string {
-	stat := prome.NewStat("LocalFinder.GetMD5")
+func (finder *LocalFinder) GetETag(filepath string) string {
+	stat := prome.NewStat("LocalFinder.GetETag")
 	defer stat.End()
 	return utils.GetMD5(filepath)
 }

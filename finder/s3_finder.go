@@ -164,8 +164,8 @@ func (finder *S3Finder) GetUpdateTime(filepath string) int64 {
 	return object.LastModified.Unix()
 }
 
-func (finder *S3Finder) GetMD5(filepath string) string {
-	stat := prome.NewStat("S3Finder.GetMD5")
+func (finder *S3Finder) GetETag(filepath string) string {
+	stat := prome.NewStat("S3Finder.GetETag")
 	defer stat.End()
 	bucket, err := finder.getBucket(filepath)
 	if err != nil {
@@ -187,6 +187,6 @@ func (finder *S3Finder) GetMD5(filepath string) string {
 		stat.MarkErr()
 		return ""
 	}
-	md5 := *object.ETag
-	return md5[1 : len(md5)-1]
+	etag := *object.ETag
+	return etag[1 : len(etag)-1]
 }

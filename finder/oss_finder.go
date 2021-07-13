@@ -183,8 +183,51 @@ func (finder *OSSFinder) GetUpdateTime(filepath string) int64 {
 	return ts.Unix()
 }
 
-func (finder *OSSFinder) GetMD5(filepath string) string {
-	stat := prome.NewStat("OSSFinder.GetMD5")
+func (finder *OSSFinder) GetETag(filepath string) string {
+	stat := prome.NewStat("OSSFinder.GetETag")
+	defer stat.End()
+	bucket, err := finder.getBucket(filepath)
+	if err != nil {
+		stat.MarkErr()
+		return ""
+	}
+	path, err := finder.getPath(filepath)
+	if err != nil {
+		stat.MarkErr()
+		return ""
+	}
+	timeout := 60
+	if finder.Config.Timeout > 0 {
+		timeout = finder.Config.Timeout
+	}
+
+	client, err := oss.New(
+		finder.Config.Endpoint,
+		finder.Config.AccessKey,
+		finder.Config.SecretKey,
+		oss.Timeout(int64(timeout), int64(timeout)),
+	)
+	if err != nil {
+		stat.MarkErr()
+		return ""
+	}
+	ossBucket, err := client.Bucket(bucket)
+	if err != nil {
+		stat.MarkErr()
+		return ""
+	}
+	head, err := ossBucket.GetObjectMeta(path)
+
+	if err != nil {
+		stat.MarkErr()
+		return ""
+	}
+
+	return head.Get("ETag")
+}
+
+func (finder *OSSFinder) GetLocalETag(filepath string) string {
+	stat := prome.NewStat("OSSFinder.GetLocalETag")
 	defer stat.End()
 	bucket, err := finder.getBucket(filepath)
 	if err != nil {

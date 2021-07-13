@@ -5,9 +5,10 @@ import (
 	"github.com/uopensail/ulib/commonconfig"
 	"github.com/uopensail/ulib/finder"
 	"github.com/uopensail/ulib/prome"
-	"github.com/uopensail/ulib/utils"
 	"github.com/uopensail/ulib/zlog"
 	"go.uber.org/zap"
+	"io/ioutil"
+	"os"
 	"sync"
 	"time"
 )
@@ -19,6 +20,7 @@ const (
 	RemoteFileError
 	LocalFileIsNewest
 	DownloadFileError
+	WriteLocalETagError
 )
 
 type ITable interface{}
@@ -95,7 +97,7 @@ func Register(key string, cfg *commonconfig.DownloaderConfig, factory CreateFunc
 			switch status {
 			case DownloadOK:
 				record.LastUpdateTime = remoteUpdateTime
-			case DownloadFileError, RemoteFileError:
+			case DownloadFileError, RemoteFileError, WriteLocalETagError:
 				prome.NewStat(fmt.Sprintf("Loader.%s", key)).MarkErr().End()
 				continue
 			case LocalFileIsNewest:
@@ -144,18 +146,42 @@ func GetTable(key string) ITable {
 	return nil
 }
 
+func readLocalETag(localPath string) string {
+	f, err := os.OpenFile(fmt.Sprintf("%s_success", localPath), os.O_RDONLY, 0600)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+
+	contentByte, err := ioutil.ReadAll(f)
+	if err != nil {
+		return ""
+	}
+	return string(contentByte)
+}
+
+func writeLocalETag(localPath string, etag string) error {
+	f, err := os.Create(fmt.Sprintf("%s_success", localPath))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.Write([]byte(etag))
+	return err
+}
+
 func download(finder finder.IFinder, remotePath, localPath string) (Status, int64) {
-	localMD5 := utils.GetMD5(localPath)
-	remoteMD5 := finder.GetMD5(remotePath)
+	localETag := readLocalETag(localPath)
+	remoteETag := finder.GetETag(remotePath)
 	remoteUpdateTime := finder.GetUpdateTime(remotePath)
 	//远程找不到文件注册出错
-	if len(remoteMD5) == 0 {
-		zlog.LOG.Error(fmt.Sprintf("Get %s Modify Time error", remotePath))
+	if len(remoteETag) == 0 {
+		zlog.LOG.Error(fmt.Sprintf("Get %s ETag error", remotePath))
 		return RemoteFileError, -1
 	}
 
 	//不需要下载
-	if remoteMD5 == localMD5 {
+	if localETag == remoteETag {
 		return LocalFileIsNewest, remoteUpdateTime
 	}
 
@@ -164,6 +190,10 @@ func download(finder finder.IFinder, remotePath, localPath string) (Status, int6
 	if err != nil || size == 0 {
 		zlog.LOG.Error(fmt.Sprintf("DownLoader %s error", remotePath))
 		return DownloadFileError, -1
+	}
+	err = writeLocalETag(localPath, remoteETag)
+	if err != nil {
+		return WriteLocalETagError, -1
 	}
 	return DownloadOK, remoteUpdateTime
 }

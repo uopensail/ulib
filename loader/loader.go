@@ -5,10 +5,13 @@ import (
 	"github.com/uopensail/ulib/commonconfig"
 	"github.com/uopensail/ulib/finder"
 	"github.com/uopensail/ulib/prome"
+	"github.com/uopensail/ulib/utils"
 	"github.com/uopensail/ulib/zlog"
-	"go.uber.org/zap"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -25,7 +28,7 @@ const (
 
 type ITable interface{}
 
-type CreateFunc func(interface{}) ITable
+type CreateFunc func(dataPath string, params interface{}) ITable
 
 type ReleaseFunc func(ITable, interface{})
 
@@ -33,7 +36,8 @@ type Job struct {
 	Key            string
 	Finder         finder.IFinder
 	Interval       int
-	LastUpdateTime int64
+	IterCount      int64
+	DownloadConfig *commonconfig.DownloaderConfig
 }
 
 type Manager struct {
@@ -50,28 +54,31 @@ func init() {
 	}
 }
 
-func Register(key string, cfg *commonconfig.DownloaderConfig, factory CreateFunc,
-	release ReleaseFunc, createParams, releaseParams interface{}) bool {
+//Register 注册任务
+func Register(key string, cfg *commonconfig.DownloaderConfig,
+	factory CreateFunc, release ReleaseFunc,
+	createParams, releaseParams interface{}) bool {
 	interval := 30
 	if cfg.Interval > 0 {
 		interval = cfg.Interval
 	}
+
+	myFinder := finder.GetFinder(&cfg.FinderConfig)
+	status, iterCount := tryDownloadIfNeed(myFinder, cfg.SourcePath, cfg.LocalPath)
+
+	switch status {
+	case DownloadFileError, RemoteFileError, WriteLocalETagError:
+		return false
+	}
 	record := &Job{
 		Key:            key,
 		Interval:       interval,
-		Finder:         finder.GetFinder(&cfg.FinderConfig),
-		LastUpdateTime: 0,
-	}
-
-	status, remoteUpdateTime := download(record.Finder, cfg.SourcePath, cfg.LocalPath)
-	switch status {
-	case DownloadOK, LocalFileIsNewest:
-		record.LastUpdateTime = remoteUpdateTime
-	case DownloadFileError, RemoteFileError:
-		return false
+		Finder:         myFinder,
+		IterCount:      iterCount,
+		DownloadConfig: cfg,
 	}
 	//加载table
-	table := factory(createParams)
+	table := factory(fmt.Sprintf("%s.%d", record.DownloadConfig.LocalPath, iterCount), createParams)
 	ManagerImp.Locker.Lock()
 	ManagerImp.TableMap[key] = table
 	ManagerImp.JobMap[key] = record
@@ -82,36 +89,23 @@ func Register(key string, cfg *commonconfig.DownloaderConfig, factory CreateFunc
 		defer ticker.Stop()
 		for {
 			<-ticker.C
-			realUpdateTime := r.Finder.GetUpdateTime(cfg.SourcePath)
-			if realUpdateTime < r.LastUpdateTime {
-				prome.NewStat(fmt.Sprintf("Loader.%s", r.Key)).MarkOk().End()
-				zlog.LOG.Info(fmt.Sprintf("Loader: %s do not need reload", r.Key),
-					zap.String("source", cfg.SourcePath),
-					zap.String("local", cfg.LocalPath),
-					zap.Int64("updateTime", remoteUpdateTime),
-				)
-				continue
-			}
-
-			status, remoteUpdateTime = download(record.Finder, cfg.SourcePath, cfg.LocalPath)
+			status, iterCount = tryDownloadIfNeed(r.Finder, r.DownloadConfig.SourcePath, r.DownloadConfig.LocalPath)
 			switch status {
 			case DownloadOK:
-				record.LastUpdateTime = remoteUpdateTime
+				record.IterCount = iterCount
 			case DownloadFileError, RemoteFileError, WriteLocalETagError:
 				prome.NewStat(fmt.Sprintf("Loader.%s", key)).MarkErr().End()
 				continue
 			case LocalFileIsNewest:
-				record.LastUpdateTime = remoteUpdateTime
 				prome.NewStat(fmt.Sprintf("Loader.%s", r.Key)).MarkOk().End()
-				zlog.LOG.Info(fmt.Sprintf("Loader: %s do not need reload", r.Key),
-					zap.String("source", cfg.SourcePath),
-					zap.String("local", cfg.LocalPath),
-					zap.Int64("updateTime", remoteUpdateTime),
-				)
+				//zlog.LOG.Info(fmt.Sprintf("Loader: %s do not need reload", r.Key),
+				//	zap.String("source", r.DownloadConfig.SourcePath),
+				//	zap.String("local", fmt.Sprintf("%s.%d", r.DownloadConfig.LocalPath, r.IterCount)),
+				//)
 				continue
 			}
 
-			table = factory(createParams)
+			table = factory(fmt.Sprintf("%s.%d", r.DownloadConfig.LocalPath, r.IterCount), createParams)
 			ManagerImp.Locker.Lock()
 			old, ok := ManagerImp.TableMap[key]
 			ManagerImp.TableMap[key] = table
@@ -119,22 +113,21 @@ func Register(key string, cfg *commonconfig.DownloaderConfig, factory CreateFunc
 
 			if ok {
 				//延迟释放
-				go func(obj ITable, p interface{}) {
+				go func(obj ITable, p interface{}, count int64, localPath string) {
 					time.Sleep(time.Second)
 					if release != nil && obj != nil {
 						release(obj, p)
-						fmt.Println("release")
 					}
-				}(old, releaseParams)
+					os.Remove(fmt.Sprintf("%s.%d", localPath, count-1))
+					os.Remove(fmt.Sprintf("%s.%d_meta", localPath, count-1))
+				}(old, releaseParams, iterCount, r.DownloadConfig.LocalPath)
 			}
 
-			r.LastUpdateTime = realUpdateTime
 			prome.NewStat(fmt.Sprintf("Loader.%s", r.Key)).MarkOk().End()
-			zlog.LOG.Info(fmt.Sprintf("Loader: %s reload", r.Key),
-				zap.String("source", cfg.SourcePath),
-				zap.String("local", cfg.LocalPath),
-				zap.Int64("updateTime", remoteUpdateTime),
-			)
+			//zlog.LOG.Info(fmt.Sprintf("Loader: %s reload", r.Key),
+			//	zap.String("source", r.DownloadConfig.SourcePath),
+			//	zap.String("local", fmt.Sprintf("%s.%d", r.DownloadConfig.LocalPath, r.IterCount)),
+			//)
 		}
 	}(record)
 	return true
@@ -150,7 +143,7 @@ func GetTable(key string) ITable {
 }
 
 func readLocalETag(localPath string) string {
-	f, err := os.OpenFile(fmt.Sprintf("%s_success", localPath), os.O_RDONLY, 0600)
+	f, err := os.OpenFile(localPath, os.O_RDONLY, 0600)
 	if err != nil {
 		return ""
 	}
@@ -164,7 +157,7 @@ func readLocalETag(localPath string) string {
 }
 
 func writeLocalETag(localPath string, etag string) error {
-	f, err := os.Create(fmt.Sprintf("%s_success", localPath))
+	f, err := os.Create(localPath)
 	if err != nil {
 		return err
 	}
@@ -173,33 +166,58 @@ func writeLocalETag(localPath string, etag string) error {
 	return err
 }
 
-func download(finder finder.IFinder, remotePath, localPath string) (Status, int64) {
-	localETag := readLocalETag(localPath)
+func getNewestFile(filename string) (string, int64) {
+	index := -1
+	files, _ := utils.ListDir(filepath.Dir(filename))
+	for i := 0; i < len(files); i++ {
+		if strings.HasPrefix(files[i], filename+".") {
+			v, err := strconv.Atoi(files[i][len(filename)+1:])
+			if err != nil {
+				continue
+			}
+			if v > index {
+				index = v
+			}
+		}
+	}
+	if index == -1 {
+		return "", -1
+	}
+	return fmt.Sprintf("%s.%d", filename, index), int64(index)
+}
+
+//tryDownloadIfNeed 下载文件
+func tryDownloadIfNeed(finder finder.IFinder, remotePath, localPath string) (Status, int64) {
 	remoteETag := finder.GetETag(remotePath)
-	remoteUpdateTime := finder.GetUpdateTime(remotePath)
-	fmt.Println(localETag, remoteETag, remoteUpdateTime)
-	//远程找不到文件注册出错
 	if len(remoteETag) == 0 {
-		zlog.LOG.Error(fmt.Sprintf("Get %s ETag error", remotePath))
+		zlog.LOG.Error(fmt.Sprintf("Get %s Meta error", remotePath))
 		return RemoteFileError, -1
 	}
 
-	//不需要下载
-	if localETag == remoteETag {
-		return LocalFileIsNewest, remoteUpdateTime
+	localFileName, iterCount := getNewestFile(localPath)
+
+	//本地有文件
+	if len(localFileName) > 0 {
+		localETag := readLocalETag(localFileName + "_meta")
+		//etag相等，或者远程etag出错，就不需要下载
+		if remoteETag == localETag {
+			return LocalFileIsNewest, iterCount
+		}
 	}
 
-	//下载文件
-	size, err := finder.Download(remotePath, localPath)
+	iterCount++
+
+	//需要下载文件
+	size, err := finder.Download(remotePath, fmt.Sprintf("%s.%d", localPath, iterCount))
 	if err != nil || size == 0 {
 		zlog.LOG.Error(fmt.Sprintf("DownLoader %s error", remotePath))
 		return DownloadFileError, -1
 	}
-	err = writeLocalETag(localPath, remoteETag)
+	err = writeLocalETag(fmt.Sprintf("%s.%d_meta", localPath, iterCount), remoteETag)
 	if err != nil {
 		return WriteLocalETagError, -1
 	}
-	return DownloadOK, remoteUpdateTime
+	return DownloadOK, iterCount
 }
 
 var ManagerImp *Manager

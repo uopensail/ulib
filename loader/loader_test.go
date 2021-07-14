@@ -16,8 +16,8 @@ func TestLoader(t *testing.T) {
 	}
 
 	cfg.Type = "local"
-	createFunc := func(p interface{}) ITable {
-		file, _ := os.Open(p.(string))
+	createFunc := func(path string, p interface{}) ITable {
+		file, _ := os.Open(path)
 		data, _ := ioutil.ReadAll(file)
 		fmt.Println(string(data))
 		return file
@@ -28,9 +28,5 @@ func TestLoader(t *testing.T) {
 	}
 
 	Register("a", cfg, createFunc, releaseFunc, cfg.LocalPath, nil)
-	Register("b", cfg, createFunc, releaseFunc, cfg.LocalPath, nil)
-	Register("c", cfg, createFunc, releaseFunc, cfg.LocalPath, nil)
-	Register("d", cfg, createFunc, releaseFunc, cfg.LocalPath, nil)
-	Register("e", cfg, createFunc, releaseFunc, cfg.LocalPath, nil)
 	select {}
 }

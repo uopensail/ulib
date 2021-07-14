@@ -55,13 +55,21 @@ func CopyFile(src, dst string) (int64, error) {
 }
 
 func ListDir(dir string) ([]string, error) {
+	if len(dir) == 0 {
+		return nil, fmt.Errorf("dir: %s error", dir)
+	}
+
+	if dir[len(dir)-1] == '/' {
+		dir = dir[:len(dir)]
+	}
 	files, err := ioutil.ReadDir(dir)
+
 	if err != nil {
 		return nil, err
 	}
 	ret := make([]string, 0, len(files))
 	for _, f := range files {
-		ret = append(ret, f.Name())
+		ret = append(ret, dir+"/"+f.Name())
 	}
 	return ret, nil
 }

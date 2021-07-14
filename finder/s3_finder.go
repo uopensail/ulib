@@ -116,7 +116,10 @@ func (finder *S3Finder) Download(src, dst string) (int64, error) {
 		stat.MarkErr()
 		return 0, err
 	}
-	client := s3manager.NewDownloader(finder.Session)
+	client := s3manager.NewDownloader(finder.Session,
+		func(d *s3manager.Downloader) {
+			d.Concurrency = 1 //控制下载速度
+		})
 	timeout := 60
 	if finder.Config.Timeout > 0 {
 		timeout = finder.Config.Timeout

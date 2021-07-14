@@ -44,9 +44,9 @@ type FinderConfig struct {
 }
 
 type DownloaderConfig struct {
-	FinderConfig
-	SourcePath string            `toml:"source_path"`
-	LocalPath  string            `toml:"local_path"`
-	Interval   int               `toml:"interval"`
-	Extra      map[string]string `toml:"extra"`
+	FinderConfig `toml:",inline"`
+	SourcePath   string            `toml:"source_path"`
+	LocalPath    string            `toml:"local_path"`
+	Interval     int               `toml:"interval"`
+	Extra        map[string]string `toml:"extra"`
 }

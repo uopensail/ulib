@@ -121,7 +121,10 @@ func Register(key string, cfg *commonconfig.DownloaderConfig, factory CreateFunc
 				//延迟释放
 				go func(obj ITable, p interface{}) {
 					time.Sleep(time.Second)
-					release(obj, p)
+					if release != nil && obj != nil {
+						release(obj, p)
+						fmt.Println("release")
+					}
 				}(old, releaseParams)
 			}
 
@@ -174,6 +177,7 @@ func download(finder finder.IFinder, remotePath, localPath string) (Status, int6
 	localETag := readLocalETag(localPath)
 	remoteETag := finder.GetETag(remotePath)
 	remoteUpdateTime := finder.GetUpdateTime(remotePath)
+	fmt.Println(localETag, remoteETag, remoteUpdateTime)
 	//远程找不到文件注册出错
 	if len(remoteETag) == 0 {
 		zlog.LOG.Error(fmt.Sprintf("Get %s ETag error", remotePath))

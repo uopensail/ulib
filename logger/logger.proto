@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package logger;
+option go_package = "github.com/uopensail/ulib/logger";
+
+message Log {
+  string channel = 1;                           //场景
+  string userID = 2;                            //用户id
+  string client_version = 3;                    //客户端版本
+  int64 ts = 4;                                 //时间戳
+  string tz = 5;                                //时区
+  string country = 6;                           //国家
+  string model = 7;                             //机型
+  string brand = 8;                             //品牌
+  string language = 9;                          //语言
+  string os = 10;                               // 操作系统
+  string event = 11;                            //事件
+  float latitude = 12;                          //维度
+  float longitude = 13;                         //经度
+  string ip = 14;                               //ip
+  int64 wts = 15;                               //写入kafka的时间戳
+  map<string, string> params = 16;              //其他参数
+}
+
+message BatchRequest {
+  repeated Log logs = 1;
+}
+
+message SingleRequest {
+  Log log = 1;
+}
+
+message Response {
+  int32 status = 1;
+  string message = 2;
+}
+
+service LogServer {
+  rpc batch(BatchRequest) returns (Response){}
+  rpc single(SingleRequest) returns (Response){}
+}

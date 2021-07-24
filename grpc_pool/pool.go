@@ -3,12 +3,13 @@ package grpc_pool
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/uopensail/ulib/commonconfig"
 	"golang.org/x/exp/rand"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
-	"strings"
-	"time"
 )
 
 type grpcConn struct {
@@ -80,7 +81,6 @@ func NewPool(cfg *commonconfig.GRPCClientConfig) *Pool {
 			timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Microsecond*time.Duration(timeout))
 			conn, err := grpc.DialContext(timeoutCtx,
 				urls[i],
-				grpc.WithDefaultServiceConfig(`{loadBalancingConfig:[{"round_robin":{}}]}`),
 				grpc.WithInsecure(),
 				grpc.WithBlock(),
 			)

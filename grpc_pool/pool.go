@@ -21,11 +21,11 @@ type grpcConn struct {
 
 type Pool struct {
 	Config  *commonconfig.GRPCClientConfig
-	Clients []*grpcConn
+	Clients []grpcConn
 	Count   int
 }
 
-func check(conns []*grpcConn) {
+func check(conns []grpcConn) {
 	ticker := time.NewTicker(5 * time.Second)
 	for {
 		<-ticker.C
@@ -72,7 +72,7 @@ func NewPool(cfg *commonconfig.GRPCClientConfig) *Pool {
 	}
 	pool := &Pool{
 		Config:  cfg,
-		Clients: make([]*grpcConn, maxConn*len(urls)),
+		Clients: make([]grpcConn, maxConn*len(urls)),
 		Count:   maxConn * len(urls),
 	}
 

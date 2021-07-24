@@ -3,12 +3,13 @@ package grpc_pool
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/uopensail/ulib/commonconfig"
 	"golang.org/x/exp/rand"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
-	"strings"
-	"time"
 )
 
 type grpcConn struct {
@@ -20,11 +21,11 @@ type grpcConn struct {
 
 type Pool struct {
 	Config  *commonconfig.GRPCClientConfig
-	Clients []*grpcConn
+	Clients []grpcConn
 	Count   int
 }
 
-func check(conns []*grpcConn) {
+func check(conns []grpcConn) {
 	ticker := time.NewTicker(5 * time.Second)
 	for {
 		<-ticker.C
@@ -36,7 +37,7 @@ func check(conns []*grpcConn) {
 					conns[i].status = false
 				}
 			} else {
-				timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Microsecond*time.Duration(conns[i].timeout))
+				timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Millisecond*time.Duration(conns[i].timeout))
 				conn, err := grpc.DialContext(timeoutCtx,
 					conns[i].url,
 					grpc.WithDefaultServiceConfig(`{loadBalancingConfig:[{"round_robin":{}}]}`),
@@ -71,16 +72,15 @@ func NewPool(cfg *commonconfig.GRPCClientConfig) *Pool {
 	}
 	pool := &Pool{
 		Config:  cfg,
-		Clients: make([]*grpcConn, maxConn*len(urls)),
+		Clients: make([]grpcConn, maxConn*len(urls)),
 		Count:   maxConn * len(urls),
 	}
 
 	for i := 0; i < len(urls); i++ {
 		for j := 0; j < maxConn; j++ {
-			timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Microsecond*time.Duration(timeout))
+			timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Millisecond*time.Duration(timeout))
 			conn, err := grpc.DialContext(timeoutCtx,
 				urls[i],
-				grpc.WithDefaultServiceConfig(`{loadBalancingConfig:[{"round_robin":{}}]}`),
 				grpc.WithInsecure(),
 				grpc.WithBlock(),
 			)

@@ -26,9 +26,9 @@ func Init(cfg *commonconfig.GRPCClientConfig) {
 	go globalLoggerSDK.Flush()
 }
 
-func (sdk *SDK) Push(log *Log) {
+func Push(log *Log) {
 	select {
-	case sdk.channel <- log:
+	case globalLoggerSDK.channel <- log:
 		break
 	default:
 		prome.NewStat("Logger.SDK.Buffer.Full").End()

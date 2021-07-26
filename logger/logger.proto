@@ -4,8 +4,8 @@ package logger;
 option go_package = "github.com/uopensail/ulib/logger";
 
 message Log {
-  string channel = 1;                           //场景
-  string userID = 2;                            //用户id
+  string product_id = 1;                        //产品id
+  string user_id = 2;                           //用户id
   string client_version = 3;                    //客户端版本
   int64 ts = 4;                                 //时间戳
   string tz = 5;                                //时区

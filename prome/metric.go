@@ -18,11 +18,11 @@ const (
 )
 
 const (
-	MetricsChannelBuff          = 30000
-	MetricsCollectInterval      = 30
-	MetricsGatherDBBuffSize     = 300
-	MetricsGatherBucketSize     = 20
-	MetricsGatherBucketMaxValue = 100
+	MetricsChannelBuff        = 30000
+	MetricsCollectInterval    = 30
+	MetricsGatherDBBuffSize   = 300
+	MetricsCostBucketSize     = 100
+	MetricsCostBucketMaxValue = 200
 )
 
 type MetricsItem struct {
@@ -54,7 +54,7 @@ func (mi *MetricsItem) SetCounter(counter int) *MetricsItem {
 }
 
 func (mi *MetricsItem) End() {
-	if rand.Float32() < mi.sampleRate {
+	if mi.sampleRate >= 1 || rand.Float32() < mi.sampleRate {
 		mi.costTime = time.Now().UnixNano() - mi.costTime
 		select {
 		case metricsInstance.channel <- mi:
@@ -118,6 +118,21 @@ func (mInstance *MetricsInstance) startLoop() {
 	}
 
 }
+
+func calcBucketIndex(ms int) int {
+	var bIndex int
+	if ms <= 50 {
+		bIndex = int(ms) - 1
+		if bIndex < 0 {
+			bIndex = 0
+		}
+	} else if ms > MetricsCostBucketMaxValue {
+		bIndex = MetricsCostBucketSize
+	} else {
+		bIndex = int((ms-51)/3 + 50)
+	}
+	return bIndex
+}
 func (mInstance *MetricsInstance) tickerCollectInfos() {
 	if mInstance.metricsMap == nil || len(mInstance.metricsMap) <= 0 {
 		return
@@ -136,6 +151,21 @@ func (mInstance *MetricsInstance) tickerCollectInfos() {
 				metricsInfos[index].MaxCost = gather.maxCost / float64(time.Millisecond)
 				metricsInfos[index].AvgCost = float64(gather.sumCost) / float64(gather.total) / float64(time.Millisecond)
 				metricsInfos[index].QPS = float32(gather.total) / collectInterval
+
+				//计算cost bucket
+				leCosts := []int{3, 6, 10, 15, 20, 25, 35, 45, 59, 98, 149, 200, 999}
+				costBucket := make(map[float64]uint64, len(leCosts))
+				cbi := 0
+				bucketSum := uint64(0)
+				for bi := 0; bi < len(leCosts); bi++ {
+					leCost := leCosts[bi]
+					endBucket := calcBucketIndex(leCost)
+					for ; cbi <= endBucket; cbi++ {
+						bucketSum += uint64(gather.costBucket[cbi])
+					}
+					costBucket[float64(leCost)] = bucketSum
+				}
+				metricsInfos[index].CostBucket = costBucket
 				if j == StatusOK {
 					metricsInfos[index].Status = "OK"
 				} else {
@@ -175,11 +205,8 @@ func (mInstance *MetricsInstance) AddItem(mi *MetricsItem) {
 	gather.counter += mi.counter
 	//cost ms
 	costMs := mi.costTime / int64(time.Millisecond)
-	bucketIndex := costMs / (MetricsGatherBucketMaxValue / MetricsGatherBucketSize)
-	if bucketIndex >= MetricsGatherBucketSize {
-		bucketIndex = MetricsGatherBucketSize - 1
-	}
-	gather.costBucket[bucketIndex]++
+	bIndex := calcBucketIndex(int(costMs))
+	gather.costBucket[bIndex]++
 	metricsInstance.metricsMap[mi.name] = gathers
 }
 
@@ -188,17 +215,19 @@ type MetricsGather struct {
 	sumCost    int64
 	total      int
 	counter    int
-	costBucket [20]int32
+	costBucket [MetricsCostBucketSize + 1]uint32
 }
 
 type MetricsInfo struct {
-	Name       string  `json:"name"`
-	Status     string  `json:"status"`
-	QPS        float32 `json:"qps"`
-	Total      int     `json:"total"`
-	AvgCost    float64 `json:"avg_cost"`
-	MaxCost    float64 `json:"max_cost"`
-	AvgCounter float32 `json:"avg_counter"`
+	Name       string             `json:"name"`
+	Status     string             `json:"status"`
+	QPS        float32            `json:"qps"`
+	Total      int                `json:"total"`
+	AvgCost    float64            `json:"avg_cost"`
+	MaxCost    float64            `json:"max_cost"`
+	AvgCounter float32            `json:"avg_counter"`
+	Counter    float32            `json:"counter"`
+	CostBucket map[float64]uint64 `json:"cost_bucket"`
 }
 
 func (info *MetricsInfo) String() string {

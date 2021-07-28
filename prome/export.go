@@ -15,59 +15,32 @@ var (
 )
 
 type ServerExporter struct {
-	httpServer    *http.Server
-	maxCostTime   *prometheus.CounterVec
-	avgCount      *prometheus.CounterVec
-	totalRequst   *prometheus.CounterVec
-	qps           *prometheus.CounterVec
-	minCostTime   *prometheus.CounterVec
-	avgCostTime   *prometheus.CounterVec
-	avgCostBucket *prometheus.HistogramVec
+	httpServer *http.Server
+
+	maxCostTime *prometheus.Desc
+	avgCounter  *prometheus.Desc
+	qps         *prometheus.Desc
+	avgCostTime *prometheus.Desc
+	costBucket  *prometheus.Desc
 }
 
 func NewServerExporter(namespace string) *ServerExporter {
 	serverE := ServerExporter{
-		maxCostTime: newServerMetric(namespace, "max_cost_time", "最大耗时"),
-		minCostTime: newServerMetric(namespace, "min_cost_time", "最小耗时"),
-		avgCostTime: newServerMetric(namespace, "avg_cost_time", "平均耗时"),
-		avgCount:    newServerMetric(namespace, "avg_conut", "平均计数"),
-		totalRequst: newServerMetric(namespace, "total_request", "请求的总数量"),
-		qps:         newServerMetric(namespace, "qps", "qps"),
-		avgCostBucket: prometheus.NewHistogramVec(prometheus.HistogramOpts{
-			Namespace: namespace,
-			Name:      "cost_bucket",
-			Help:      "耗时分桶",
-		}, serverLabelNames),
+		maxCostTime: newServerDesc(namespace, "max_cost_time", "最大耗时"),
+		avgCostTime: newServerDesc(namespace, "avg_cost_time", "平均耗时"),
+		avgCounter:  newServerDesc(namespace, "avg_counter", "平均计数"),
+		qps:         newServerDesc(namespace, "qps", "qps"),
+		costBucket:  newServerDesc(namespace, "cost", "耗时分桶"),
 	}
 	return &serverE
 }
 
-func (serverE *ServerExporter) Reset() {
-	serverE.maxCostTime.Reset()
-	serverE.minCostTime.Reset()
-	serverE.avgCostTime.Reset()
-	serverE.avgCount.Reset()
-	serverE.totalRequst.Reset()
-	serverE.qps.Reset()
-}
-
 func (serverE *ServerExporter) Describe(ch chan<- *prometheus.Desc) {
-	serverE.maxCostTime.Describe(ch)
-	serverE.minCostTime.Describe(ch)
-	serverE.avgCostTime.Describe(ch)
-	serverE.avgCount.Describe(ch)
-	serverE.totalRequst.Describe(ch)
-	serverE.qps.Describe(ch)
-
-}
-
-func (serverE *ServerExporter) Collect(ch chan<- prometheus.Metric) {
-	serverE.maxCostTime.Collect(ch)
-	serverE.minCostTime.Collect(ch)
-	serverE.avgCostTime.Collect(ch)
-	serverE.avgCount.Collect(ch)
-	serverE.totalRequst.Collect(ch)
-	serverE.qps.Collect(ch)
+	ch <- serverE.maxCostTime
+	ch <- serverE.avgCostTime
+	ch <- serverE.avgCounter
+	ch <- serverE.qps
+	ch <- serverE.costBucket
 
 }
 
@@ -79,14 +52,9 @@ type Exporter struct {
 	totalScrapes prometheus.Counter
 }
 
-func newServerMetric(namespace, metricName string, docString string) *prometheus.CounterVec {
-	return prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: namespace,
-			Name:      metricName,
-			Help:      docString,
-		},
-		serverLabelNames)
+func newServerDesc(namespace, metricName string, docString string) *prometheus.Desc {
+	return prometheus.NewDesc(fmt.Sprintf("%s_%s", namespace, metricName),
+		docString, serverLabelNames, nil)
 }
 
 func NewExporter(namespace string) *Exporter {
@@ -122,18 +90,15 @@ func (exporter *Exporter) Collect(ch chan<- prometheus.Metric) {
 		}
 	}()
 
-	exporter.ServerExporter.Reset()
-
-	exporter.scrape()
+	exporter.scrape(ch)
 
 	ch <- exporter.up
 	ch <- exporter.totalScrapes
-	exporter.ServerExporter.Collect(ch)
 
 	zlog.LOG.Info("prometheus collect done")
 }
 
-func (exporter *Exporter) scrape() {
+func (exporter *Exporter) scrape(ch chan<- prometheus.Metric) {
 	exporter.totalScrapes.Inc()
 
 	minfo := metricsInstance.GetMetricsInfo()
@@ -142,17 +107,21 @@ func (exporter *Exporter) scrape() {
 		exporter.up.Set(0)
 	} else {
 		exporter.up.Set(1)
+
 		for _, mi := range minfo {
-			maplabels := make(map[string]string, 2)
-			maplabels["name"] = mi.Name
-			maplabels["status"] = mi.Status
-			labels := prometheus.Labels(maplabels)
-			exporter.avgCount.With(labels).Add(float64(mi.AvgCounter))
-			exporter.totalRequst.With(labels).Add(float64(mi.Total))
-			exporter.qps.With(labels).Add(float64(mi.QPS))
-			exporter.maxCostTime.With(labels).Add(float64(mi.MaxCost))
-			exporter.avgCostTime.With(labels).Add(float64(mi.AvgCost))
-			//exporter.avgCostBucket.With(labels)
+			labelvs := []string{mi.Name, mi.Status}
+			ch <- prometheus.MustNewConstMetric(exporter.qps, prometheus.GaugeValue,
+				float64(mi.QPS), labelvs...)
+			ch <- prometheus.MustNewConstMetric(exporter.avgCounter, prometheus.GaugeValue,
+				float64(mi.AvgCounter), labelvs...)
+			if mi.Status == "OK" {
+				ch <- prometheus.MustNewConstMetric(exporter.avgCostTime, prometheus.GaugeValue,
+					float64(mi.AvgCost), labelvs...)
+				ch <- prometheus.MustNewConstMetric(exporter.maxCostTime, prometheus.GaugeValue,
+					float64(mi.MaxCost), labelvs...)
+				ch <- prometheus.MustNewConstHistogram(exporter.costBucket, uint64(mi.Total),
+					mi.AvgCost*float64(mi.Total), mi.CostBucket, labelvs...)
+			}
 		}
 	}
 

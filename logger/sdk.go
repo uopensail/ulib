@@ -75,8 +75,6 @@ func (sdk *SDK) Flush() {
 			buffer[index] = log
 			index++
 			break
-		default:
-			break
 		}
 	}
 }

@@ -117,7 +117,7 @@ func (exporter *Exporter) scrape(ch chan<- prometheus.Metric) {
 			if mi.Status == "OK" {
 				ch <- prometheus.MustNewConstMetric(exporter.avgCostTime, prometheus.GaugeValue,
 					float64(mi.AvgCost), labelvs...)
-				ch <- prometheus.MustNewConstMetric(exporter.maxCostTime, prometheus.CounterValue,
+				ch <- prometheus.MustNewConstMetric(exporter.maxCostTime, prometheus.GaugeValue,
 					float64(mi.MaxCost), labelvs...)
 				ch <- prometheus.MustNewConstHistogram(exporter.costBucket, uint64(mi.Total),
 					mi.AvgCost*float64(mi.Total), mi.CostBucket, labelvs...)

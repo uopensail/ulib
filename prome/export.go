@@ -61,14 +61,12 @@ func NewExporter(namespace string) *Exporter {
 
 	export := Exporter{
 		up: prometheus.NewGauge(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "up",
-			Help:      "Was the last scrape of server successful.",
+			Name: "up",
+			Help: "Was the last scrape of server successful.",
 		}),
 		totalScrapes: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: namespace,
-			Name:      "exporter_total_scrapes",
-			Help:      "Current total server scrapes.",
+			Name: "exporter_total_scrapes",
+			Help: "Current total server scrapes.",
 		}),
 	}
 	export.ServerExporter = *NewServerExporter(namespace)

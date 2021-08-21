@@ -2,25 +2,26 @@ package logger
 
 import (
 	"context"
+	"time"
+
 	"github.com/uopensail/ulib/commonconfig"
-	"github.com/uopensail/ulib/grpc_pool"
+	"github.com/uopensail/ulib/grpc_util"
 	"github.com/uopensail/ulib/prome"
 	"github.com/uopensail/ulib/zlog"
 	"go.uber.org/zap"
-	"time"
 )
 
 const channelSize = 1000
 const bufferSize = 1000
 
 type SDK struct {
-	pool    *grpc_pool.Pool
+	pool    *grpc_util.Pool
 	channel chan *Log
 }
 
 func Init(cfg *commonconfig.GRPCClientConfig) {
 	globalLoggerSDK = &SDK{
-		pool:    grpc_pool.NewPool(cfg),
+		pool:    grpc_util.NewPool(cfg),
 		channel: make(chan *Log, channelSize),
 	}
 	go globalLoggerSDK.Flush()

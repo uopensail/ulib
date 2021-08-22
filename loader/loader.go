@@ -134,7 +134,7 @@ func Register(key string, cfg *commonconfig.DownloaderConfig,
 }
 
 func GetTable(key string) ITable {
-	ManagerImp.Locker.RLocker()
+	ManagerImp.Locker.RLock()
 	defer ManagerImp.Locker.RUnlock()
 	if v, ok := ManagerImp.TableMap[key]; ok {
 		return v

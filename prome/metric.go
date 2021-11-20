@@ -154,7 +154,7 @@ func (mInstance *MetricsInstance) tickerCollectInfos() {
 
 				//计算cost bucket
 				leCosts := []uint32{3, 6, 10, 15, 20, 25, 35, 45, 59, 98, 149, 200, 999}
-				costBucket := make(map[uint32]uint64, len(leCosts))
+				costBucket := make(map[float64]uint64, len(leCosts))
 				cbi := 0
 				bucketSum := uint64(0)
 				for bi := 0; bi < len(leCosts); bi++ {
@@ -163,7 +163,7 @@ func (mInstance *MetricsInstance) tickerCollectInfos() {
 					for ; cbi <= endBucket; cbi++ {
 						bucketSum += uint64(gather.costBucket[cbi])
 					}
-					costBucket[leCost] = bucketSum
+					costBucket[float64(leCost)] = bucketSum
 				}
 				metricsInfos[index].CostBucket = costBucket
 				if j == StatusOK {
@@ -219,15 +219,15 @@ type MetricsGather struct {
 }
 
 type MetricsInfo struct {
-	Name       string            `json:"name"`
-	Status     string            `json:"status"`
-	QPS        float32           `json:"qps"`
-	Total      int               `json:"total"`
-	AvgCost    float64           `json:"avg_cost"`
-	MaxCost    float64           `json:"max_cost"`
-	AvgCounter float32           `json:"avg_counter"`
-	Counter    float32           `json:"counter"`
-	CostBucket map[uint32]uint64 `json:"cost_bucket"`
+	Name       string             `json:"name"`
+	Status     string             `json:"status"`
+	QPS        float32            `json:"qps"`
+	Total      int                `json:"total"`
+	AvgCost    float64            `json:"avg_cost"`
+	MaxCost    float64            `json:"max_cost"`
+	AvgCounter float32            `json:"avg_counter"`
+	Counter    float32            `json:"counter"`
+	CostBucket map[float64]uint64 `json:"-"`
 }
 
 func (info *MetricsInfo) String() string {

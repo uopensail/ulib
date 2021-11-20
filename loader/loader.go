@@ -81,6 +81,9 @@ func Register(key string, cfg *commonconfig.DownloaderConfig,
 	}
 	//加载table
 	table := factory(fmt.Sprintf("%s.%d", record.DownloadConfig.LocalPath, iterCount), createParams)
+	if table == nil {
+		return false
+	}
 	ManagerImp.Locker.Lock()
 	ManagerImp.TableMap[key] = table
 	ManagerImp.JobMap[key] = record
@@ -108,6 +111,10 @@ func Register(key string, cfg *commonconfig.DownloaderConfig,
 			}
 
 			table = factory(fmt.Sprintf("%s.%d", r.DownloadConfig.LocalPath, r.IterCount), createParams)
+			if table == nil {
+				zlog.LOG.Error("create table nil")
+				continue
+			}
 			ManagerImp.Locker.Lock()
 			old, ok := ManagerImp.TableMap[key]
 			ManagerImp.TableMap[key] = table
@@ -120,8 +127,12 @@ func Register(key string, cfg *commonconfig.DownloaderConfig,
 					if release != nil && obj != nil {
 						release(obj, p)
 					}
-					os.Remove(fmt.Sprintf("%s.%d", localPath, count-1))
-					os.Remove(fmt.Sprintf("%s.%d_meta", localPath, count-1))
+					dFilePath := fmt.Sprintf("%s.%d", localPath, count-1)
+					metaPath := fmt.Sprintf("%s.%d_meta", localPath, count-1)
+					zlog.LOG.Info("loader.release.Remove", zap.String("path", dFilePath))
+					zlog.LOG.Info("loader.release.Remove.meta", zap.String("path", metaPath))
+					os.Remove(dFilePath)
+					os.Remove(metaPath)
 				}(old, releaseParams, iterCount, r.DownloadConfig.LocalPath)
 			}
 

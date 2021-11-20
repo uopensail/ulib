@@ -230,14 +230,10 @@ type MetricsInfo struct {
 	CostBucket map[float64]uint64 `json:"cost_bucket"`
 }
 
-func (info *MetricsInfo) String() string {
-	data, _ := json.Marshal(info)
-	return string(data)
-}
-
 func printStat(metricsInfo []MetricsInfo) {
 	zlog.LOG.Info("prome info")
 	for i := 0; i < len(metricsInfo); i++ {
-		zlog.LOG.Info("prome: ", zap.String("stat", metricsInfo[i].String()))
+		data, _ := json.Marshal(metricsInfo[i])
+		zlog.LOG.Info("prome: ", zap.String("stat", string(data)))
 	}
 }

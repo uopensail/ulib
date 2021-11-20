@@ -2,11 +2,6 @@ package loader
 
 import (
 	"fmt"
-	"github.com/uopensail/ulib/commonconfig"
-	"github.com/uopensail/ulib/finder"
-	"github.com/uopensail/ulib/prome"
-	"github.com/uopensail/ulib/utils"
-	"github.com/uopensail/ulib/zlog"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -14,6 +9,13 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/uopensail/ulib/commonconfig"
+	"github.com/uopensail/ulib/finder"
+	"github.com/uopensail/ulib/prome"
+	"github.com/uopensail/ulib/utils"
+	"github.com/uopensail/ulib/zlog"
+	"go.uber.org/zap"
 )
 
 type Status int
@@ -190,7 +192,7 @@ func getNewestFile(filename string) (string, int64) {
 func tryDownloadIfNeed(finder finder.IFinder, remotePath, localPath string) (Status, int64) {
 	remoteETag := finder.GetETag(remotePath)
 	if len(remoteETag) == 0 {
-		zlog.LOG.Error(fmt.Sprintf("Get %s Meta error", remotePath))
+		zlog.LOG.Error("GetETag", zap.String("remote_path", remotePath))
 		return RemoteFileError, -1
 	}
 
@@ -210,11 +212,12 @@ func tryDownloadIfNeed(finder finder.IFinder, remotePath, localPath string) (Sta
 	//需要下载文件
 	size, err := finder.Download(remotePath, fmt.Sprintf("%s.%d", localPath, iterCount))
 	if err != nil || size == 0 {
-		zlog.LOG.Error(fmt.Sprintf("DownLoader %s error", remotePath))
+		zlog.LOG.Error("Download", zap.String("remote_path", remotePath), zap.Error(err))
 		return DownloadFileError, -1
 	}
 	err = writeLocalETag(fmt.Sprintf("%s.%d_meta", localPath, iterCount), remoteETag)
 	if err != nil {
+		zlog.LOG.Error("writeLocalETag", zap.String("local_path", localPath), zap.Error(err))
 		return WriteLocalETagError, -1
 	}
 	return DownloadOK, iterCount

@@ -2,6 +2,7 @@ package zlog
 
 import (
 	"fmt"
+	"os"
 
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -47,18 +48,17 @@ func InitLogger(appName string, debug bool, logDir string) {
 	atomicLevel := zap.NewAtomicLevel()
 	atomicLevel.SetLevel(lv)
 
-	encoderConfig := zapcore.EncoderConfig{
-		TimeKey:       "time",
-		NameKey:       "logger",
-		CallerKey:     "linenum",
-		MessageKey:    "msg",
-		StacktraceKey: "stacktrace",
+	encoderConfig := zap.NewProductionEncoderConfig()
+	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	var cores []zapcore.Core
+	cores = append(cores, zapcore.NewCore(zapcore.NewConsoleEncoder(encoderConfig), // 编码器配置
+		zapcore.AddSync(&hook), // 打印到控制台和文件
+		atomicLevel))
+	if debug {
+		cores = append(cores, zapcore.NewCore(zapcore.NewJSONEncoder(encoderConfig),
+			zapcore.AddSync(os.Stdout), atomicLevel))
 	}
-	core := zapcore.NewCore(
-		zapcore.NewConsoleEncoder(encoderConfig), // 编码器配置
-		zapcore.AddSync(&hook),                   // 打印到控制台和文件
-		atomicLevel,                              // 日志级别
-	)
+	core := zapcore.NewTee(cores...)
 	logger := zap.New(core, zap.AddCaller())
 	if debug {
 		logger.WithOptions(zap.AddStacktrace(zap.WarnLevel))

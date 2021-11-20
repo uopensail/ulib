@@ -119,7 +119,7 @@ func (mInstance *MetricsInstance) startLoop() {
 
 }
 
-func calcBucketIndex(ms int) int {
+func calcBucketIndex(ms uint32) int {
 	var bIndex int
 	if ms <= 50 {
 		bIndex = int(ms) - 1
@@ -153,8 +153,8 @@ func (mInstance *MetricsInstance) tickerCollectInfos() {
 				metricsInfos[index].QPS = float32(gather.total) / collectInterval
 
 				//计算cost bucket
-				leCosts := []int{3, 6, 10, 15, 20, 25, 35, 45, 59, 98, 149, 200, 999}
-				costBucket := make(map[float64]uint64, len(leCosts))
+				leCosts := []uint32{3, 6, 10, 15, 20, 25, 35, 45, 59, 98, 149, 200, 999}
+				costBucket := make(map[uint32]uint64, len(leCosts))
 				cbi := 0
 				bucketSum := uint64(0)
 				for bi := 0; bi < len(leCosts); bi++ {
@@ -163,7 +163,7 @@ func (mInstance *MetricsInstance) tickerCollectInfos() {
 					for ; cbi <= endBucket; cbi++ {
 						bucketSum += uint64(gather.costBucket[cbi])
 					}
-					costBucket[float64(leCost)] = bucketSum
+					costBucket[leCost] = bucketSum
 				}
 				metricsInfos[index].CostBucket = costBucket
 				if j == StatusOK {
@@ -205,7 +205,7 @@ func (mInstance *MetricsInstance) AddItem(mi *MetricsItem) {
 	gather.counter += mi.counter
 	//cost ms
 	costMs := mi.costTime / int64(time.Millisecond)
-	bIndex := calcBucketIndex(int(costMs))
+	bIndex := calcBucketIndex(uint32(costMs))
 	gather.costBucket[bIndex]++
 	metricsInstance.metricsMap[mi.name] = gathers
 }
@@ -219,21 +219,25 @@ type MetricsGather struct {
 }
 
 type MetricsInfo struct {
-	Name       string             `json:"name"`
-	Status     string             `json:"status"`
-	QPS        float32            `json:"qps"`
-	Total      int                `json:"total"`
-	AvgCost    float64            `json:"avg_cost"`
-	MaxCost    float64            `json:"max_cost"`
-	AvgCounter float32            `json:"avg_counter"`
-	Counter    float32            `json:"counter"`
-	CostBucket map[float64]uint64 `json:"cost_bucket"`
+	Name       string            `json:"name"`
+	Status     string            `json:"status"`
+	QPS        float32           `json:"qps"`
+	Total      int               `json:"total"`
+	AvgCost    float64           `json:"avg_cost"`
+	MaxCost    float64           `json:"max_cost"`
+	AvgCounter float32           `json:"avg_counter"`
+	Counter    float32           `json:"counter"`
+	CostBucket map[uint32]uint64 `json:"cost_bucket"`
+}
+
+func (info *MetricsInfo) String() string {
+	data, _ := json.Marshal(info)
+	return string(data)
 }
 
 func printStat(metricsInfo []MetricsInfo) {
 	zlog.LOG.Info("prome info")
 	for i := 0; i < len(metricsInfo); i++ {
-		data, _ := json.Marshal(metricsInfo[i])
-		zlog.LOG.Info("prome: ", zap.String("stat", string(data)))
+		zlog.LOG.Info("prome: ", zap.String("stat", metricsInfo[i].String()))
 	}
 }

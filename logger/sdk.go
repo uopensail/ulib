@@ -41,6 +41,7 @@ func (sdk *SDK) write(logs []*Log) {
 	stat := prome.NewStat("Logger.SDK.write")
 	defer stat.End()
 	conn := sdk.pool.GetConn()
+
 	if conn == nil {
 		stat.MarkErr()
 	}
@@ -57,6 +58,7 @@ func (sdk *SDK) write(logs []*Log) {
 
 func (sdk *SDK) Flush() {
 	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
 	index := 0
 	buffer := make([]*Log, bufferSize)
 	var log *Log

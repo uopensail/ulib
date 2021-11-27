@@ -220,6 +220,14 @@ func tryDownloadIfNeed(finder finder.IFinder, remotePath, localPath string) (Sta
 
 	iterCount++
 
+	// 创建目录
+	baseDir := filepath.Base(localPath)
+	err := os.MkdirAll(baseDir, 0755)
+	if err != nil {
+		zlog.LOG.Warn("Download.MkdirAll", zap.String("local_path", localPath), zap.Error(err))
+		return DownloadFileError, -1
+	}
+
 	//需要下载文件
 	size, err := finder.Download(remotePath, fmt.Sprintf("%s.%d", localPath, iterCount))
 	if err != nil || size == 0 {

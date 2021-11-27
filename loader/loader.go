@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -203,7 +204,7 @@ func getNewestFile(filename string) (string, int64) {
 func tryDownloadIfNeed(finder finder.IFinder, remotePath, localPath string) (Status, int64) {
 
 	// 创建目录
-	baseDir := filepath.Base(localPath)
+	baseDir := path.Dir(localPath)
 	err := os.MkdirAll(baseDir, 0755)
 	if err != nil {
 		zlog.LOG.Warn("Download.MkdirAll", zap.String("local_path", localPath), zap.Error(err))

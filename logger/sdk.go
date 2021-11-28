@@ -15,10 +15,10 @@ const defaultChannelSize = 1000
 const defaultBufferSize = 1000
 
 type LogSDKConfig struct {
-	commonconfig.GRPCClientConfig
-	ChannelSize   int `json:"channel_size" toml:"channel_size"`
-	BufferSize    int `json:"buffer_size" toml:"buffer_size"`
-	FlushInterval int `json:"flush_interval" toml:"flush_interval"`
+	commonconfig.GRPCClientConfig `json:"grpc" toml:"grpc"`
+	ChannelSize                   int `json:"channel_size" toml:"channel_size"`
+	BufferSize                    int `json:"buffer_size" toml:"buffer_size"`
+	FlushInterval                 int `json:"flush_interval" toml:"flush_interval"`
 }
 
 type SDK struct {

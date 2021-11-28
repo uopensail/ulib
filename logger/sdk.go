@@ -11,20 +11,41 @@ import (
 	"go.uber.org/zap"
 )
 
-const channelSize = 1000
-const bufferSize = 1000
+const defaultChannelSize = 1000
+const defaultBufferSize = 1000
+
+type LogSDKConfig struct {
+	commonconfig.GRPCClientConfig
+	ChannelSize   int `json:"channel_size" toml:"channel_size"`
+	BufferSize    int `json:"buffer_size" toml:"buffer_size"`
+	FlushInterval int `json:"flush_interval" toml:"flush_interval"`
+}
 
 type SDK struct {
 	pool    *grpc_util.Pool
 	channel chan *Log
 }
 
-func Init(cfg *commonconfig.GRPCClientConfig) {
+func Init(cfg LogSDKConfig) {
+	channelSize := defaultChannelSize
+	if cfg.ChannelSize > 0 {
+		channelSize = cfg.ChannelSize
+	}
+	bufferSize := defaultBufferSize
+	if cfg.BufferSize > 0 {
+		bufferSize = cfg.BufferSize
+	}
+
 	globalLoggerSDK = &SDK{
-		pool:    grpc_util.NewPool(cfg),
+		pool:    grpc_util.NewPool(&cfg.GRPCClientConfig),
 		channel: make(chan *Log, channelSize),
 	}
-	go globalLoggerSDK.Flush()
+
+	flushInterval := 3
+	if cfg.FlushInterval > 0 {
+		flushInterval = cfg.FlushInterval
+	}
+	go globalLoggerSDK.Flush(bufferSize, flushInterval)
 }
 
 func Push(log *Log) {
@@ -56,8 +77,8 @@ func (sdk *SDK) write(logs []*Log) {
 	stat.SetCounter(len(logs))
 }
 
-func (sdk *SDK) Flush() {
-	ticker := time.NewTicker(5 * time.Second)
+func (sdk *SDK) Flush(bufferSize int, flushInterval int) {
+	ticker := time.NewTicker(time.Duration(flushInterval) * time.Second)
 	defer ticker.Stop()
 	index := 0
 	buffer := make([]*Log, bufferSize)

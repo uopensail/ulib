@@ -53,7 +53,7 @@ func Push(log *Log) {
 	case globalLoggerSDK.channel <- log:
 		break
 	default:
-		prome.NewStat("Logger.SDK.Buffer.Full").End()
+		zlog.LOG.Warn("logsdk.full")
 		break
 	}
 }

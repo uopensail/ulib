@@ -3,8 +3,11 @@ package grpc_util
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
+
+	"github.com/uopensail/ulib/prome"
 
 	"github.com/uopensail/ulib/zlog"
 	"go.uber.org/zap"
@@ -20,22 +23,32 @@ func init() {
 }
 
 type localResolver struct {
+	closed    bool
 	cc        resolver.ClientConn
 	healthCli map[string]*grpc.ClientConn
 }
 
 func (*localResolver) ResolveNow(options resolver.ResolveNowOptions) {}
-func (*localResolver) Close()                                        {}
+func (r *localResolver) Close() {
+	stat := prome.NewStat("grpc.resolver.Close")
+	defer stat.End()
+	r.closed = true
+}
 
 func (r *localResolver) watcher(urls []string) {
 	ticker := time.NewTicker(time.Second * 3)
 	defer ticker.Stop()
 	for {
+		if r.closed {
+			return
+		}
 		<-ticker.C
 		r.update(urls)
 	}
 }
 func (r *localResolver) update(urls []string) {
+	stat := prome.NewStat("grpc.resolver.update")
+	defer stat.End()
 	for i := 0; i < len(urls); i++ {
 		url := urls[i]
 		if c, ok := r.healthCli[url]; !ok || c == nil {
@@ -60,15 +73,20 @@ func (r *localResolver) update(urls []string) {
 	})
 }
 func newHealthClient(url string) *grpc.ClientConn {
+	stat := prome.NewStat("grpc.resolver.newHealthClient").MarkErr()
+	defer stat.End()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
 	c, err := grpc.DialContext(ctx, url, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		return nil
 	}
+	stat.MarkOk()
 	return c
 }
 func healthCheck(url string, c *grpc.ClientConn) error {
+	stat := prome.NewStat(fmt.Sprintf("grpc.resolver.healthCheck.%s", url)).MarkErr()
+	defer stat.End()
 	if c == nil {
 		return errors.New("connection nil")
 	}
@@ -84,6 +102,7 @@ func healthCheck(url string, c *grpc.ClientConn) error {
 		return errors.New(response.Status.String())
 	}
 	zlog.LOG.Info("grpc.check.success", zap.String("url", url))
+	stat.MarkOk()
 	return nil
 }
 

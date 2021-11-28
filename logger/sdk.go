@@ -49,6 +49,10 @@ func Init(cfg LogSDKConfig) {
 }
 
 func Push(log *Log) {
+
+	if globalLoggerSDK == nil {
+		return
+	}
 	select {
 	case globalLoggerSDK.channel <- log:
 		break

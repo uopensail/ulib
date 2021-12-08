@@ -17,7 +17,7 @@ message Log {
   string brand = 11;                             //品牌
   string language = 12;                          //语言
   string os = 13;                               // 操作系统
-  string event = 14;                            //事件
+  string eventid = 14;                          //事件
   float latitude = 15;                          //维度
   float longitude = 16;                         //经度
   string ip = 17;                               //ip

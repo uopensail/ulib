@@ -6,20 +6,25 @@ option go_package = ".;logger";
 message Log {
   string product_id = 1;                        //产品id
   string user_id = 2;                           //用户id
-  string client_version = 3;                    //客户端版本
-  int64 ts = 4;                                 //时间戳
-  string tz = 5;                                //时区
-  string country = 6;                           //国家
-  string model = 7;                             //机型
-  string brand = 8;                             //品牌
-  string language = 9;                          //语言
-  string os = 10;                               // 操作系统
-  string event = 11;                            //事件
-  float latitude = 12;                          //维度
-  float longitude = 13;                         //经度
-  string ip = 14;                               //ip
-  int64 wts = 15;                               //写入kafka的时间戳
-  map<string, string> params = 16;              //其他参数
+  string device_id = 3;                         //设备id
+  string trace_id = 4;                          //trace_id
+  string client_version = 5;                    //客户端版本
+  int32  duration = 6;						              //时长，浏览时长 秒
+  int64 ts = 7;                                 //时间戳
+  string tz = 8;                                //时区
+  string country = 9;                           //国家
+  string model = 10;                             //机型
+  string brand = 11;                             //品牌
+  string language = 12;                          //语言
+  string os = 13;                               // 操作系统
+  string event = 14;                            //事件
+  float latitude = 15;                          //维度
+  float longitude = 16;                         //经度
+  string ip = 17;                               //ip
+  int64 wts = 18;                               //写入kafka的时间戳
+  string expids = 19;                           // 实验id列表 逗号分割
+  string items = 20;                            // 商品id，逗号分割
+  map<string, string> params = 21;              //其他参数
 }
 
 message BatchRequest {

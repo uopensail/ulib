@@ -59,3 +59,8 @@ type GRPCClientConfig struct {
 	MaxConn        int    `json:"max_conn" toml:"max_conn"`
 	HealthCheck    bool   `json:"health_check" toml:"health_check"`
 }
+
+type ZkRegConfig struct {
+	Hosts  []string `toml:"hosts"`
+	Prefix string   `toml:"prefix"`
+}

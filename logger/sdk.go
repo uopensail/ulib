@@ -69,6 +69,7 @@ func (sdk *SDK) write(logs []*Log) {
 
 	if conn == nil {
 		stat.MarkErr()
+		return
 	}
 	req := &BatchRequest{
 		Logs: logs,

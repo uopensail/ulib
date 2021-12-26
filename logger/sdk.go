@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/uopensail/ulib/commonconfig"
-	"github.com/uopensail/ulib/grpc_util"
 	"github.com/uopensail/ulib/prome"
 	"github.com/uopensail/ulib/zlog"
 	"go.uber.org/zap"
@@ -15,15 +14,15 @@ const defaultChannelSize = 1000
 const defaultBufferSize = 1000
 
 type LogSDKConfig struct {
-	commonconfig.GRPCClientConfig `json:"grpc" toml:"grpc"`
-	ChannelSize                   int `json:"channel_size" toml:"channel_size"`
-	BufferSize                    int `json:"buffer_size" toml:"buffer_size"`
-	FlushInterval                 int `json:"flush_interval" toml:"flush_interval"`
+	PanguServer   commonconfig.PanguConfig `json:"pangu" toml:"pangu"`
+	ChannelSize   int                      `json:"channel_size" toml:"channel_size"`
+	BufferSize    int                      `json:"buffer_size" toml:"buffer_size"`
+	FlushInterval int                      `json:"flush_interval" toml:"flush_interval"`
 }
 
 type SDK struct {
-	pool    *grpc_util.Pool
-	channel chan *Log
+	pangucli *panguClient
+	channel  chan *Log
 }
 
 func Init(cfg LogSDKConfig) {
@@ -37,8 +36,8 @@ func Init(cfg LogSDKConfig) {
 	}
 
 	globalLoggerSDK = &SDK{
-		pool:    grpc_util.NewPool(&cfg.GRPCClientConfig),
-		channel: make(chan *Log, channelSize),
+		pangucli: InitPanguClient(cfg.PanguServer.ServiceName, cfg.PanguServer.ZKHosts),
+		channel:  make(chan *Log, channelSize),
 	}
 
 	flushInterval := 3
@@ -65,16 +64,17 @@ func Push(log *Log) {
 func (sdk *SDK) write(logs []*Log) {
 	stat := prome.NewStat("Logger.SDK.write")
 	defer stat.End()
-	conn := sdk.pool.GetConn()
 
-	if conn == nil {
+	cli := sdk.pangucli.GetRealClient()
+
+	if cli == nil {
 		stat.MarkErr()
 		return
 	}
 	req := &BatchRequest{
 		Logs: logs,
 	}
-	_, err := NewLogServerClient(conn).Batch(context.Background(), req)
+	_, err := cli.Batch(context.Background(), req)
 	if err != nil {
 		zlog.LOG.Error("Logger.SDK.write error", zap.Error(err))
 		stat.MarkErr()

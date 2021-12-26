@@ -10,13 +10,9 @@ import (
 func TestSDK(t *testing.T) {
 
 	cfg := LogSDKConfig{
-		GRPCClientConfig: commonconfig.GRPCClientConfig{
-			Url:            "grpc:///127.0.0.1:9527",
-			DialTimeout:    100,
-			RequestTimeout: 100,
-			InitConn:       2,
-			MaxConn:        2,
-			HealthCheck:    true,
+		PanguServer: commonconfig.PanguConfig{
+			ZKHosts:     []string{"127.0.0.1:2181"},
+			ServiceName: "pangu_server",
 		},
 	}
 	Init(cfg)

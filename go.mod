@@ -10,6 +10,7 @@ require (
 	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/prometheus/client_golang v1.9.0
+	github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/stretchr/testify v1.6.1 // indirect
 	go.uber.org/zap v1.15.0

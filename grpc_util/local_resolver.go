@@ -40,10 +40,17 @@ func (r *localResolver) watcher(urls []string) {
 	defer ticker.Stop()
 	for {
 		if r.closed {
-			return
+			break
 		}
 		<-ticker.C
 		r.update(urls)
+	}
+	//清理health check 连接
+	for k, v := range r.healthCli {
+		if v != nil {
+			zlog.LOG.Info("grpc.resolver.health.close", zap.String("url", k))
+			v.Close()
+		}
 	}
 }
 func (r *localResolver) update(urls []string) {
@@ -75,7 +82,7 @@ func (r *localResolver) update(urls []string) {
 func newHealthClient(url string) *grpc.ClientConn {
 	stat := prome.NewStat("grpc.resolver.newHealthClient").MarkErr()
 	defer stat.End()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 	c, err := grpc.DialContext(ctx, url, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {

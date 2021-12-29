@@ -64,3 +64,8 @@ type ZkRegConfig struct {
 	Hosts  []string `toml:"hosts"`
 	Prefix string   `toml:"prefix"`
 }
+
+type PanguConfig struct {
+	ZKHosts     []string `toml:"zkhosts"`
+	ServiceName string   `toml:"service_name"`
+}

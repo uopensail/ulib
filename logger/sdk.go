@@ -2,16 +2,14 @@ package logger
 
 import (
 	"context"
-	"fmt"
 	"time"
 
-	etcd "github.com/go-kratos/kratos/contrib/registry/etcd/v2"
-	"github.com/go-kratos/kratos/v2/transport/grpc"
 	"github.com/uopensail/ulib/commonconfig"
 	"github.com/uopensail/ulib/prome"
+	"github.com/uopensail/ulib/utils"
 	"github.com/uopensail/ulib/zlog"
-	etcdclient "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
+	grpc "google.golang.org/grpc"
 )
 
 const defaultChannelSize = 1000
@@ -29,25 +27,6 @@ type SDK struct {
 	channel chan *Log
 }
 
-func initConn(rdConf commonconfig.RegisterDiscoveryConfig) *grpc.ClientConn {
-	client, err := etcdclient.New(etcdclient.Config{
-		Endpoints: rdConf.EtcdConfig.Endpoints,
-	})
-	if err != nil {
-		zlog.LOG.Fatal("etcd error", zap.Error(err))
-	}
-	r := etcd.New(client)
-	conn, err := grpc.DialInsecure(
-		context.Background(),
-		grpc.WithEndpoint(fmt.Sprintf("discovery:///%s", rdConf.EtcdConfig.Name)),
-		grpc.WithDiscovery(r),
-	)
-	if err != nil {
-		zlog.LOG.Fatal("etcd error", zap.Error(err))
-	}
-	return conn
-}
-
 func Init(cfg LogSDKConfig) {
 	channelSize := defaultChannelSize
 	if cfg.ChannelSize > 0 {
@@ -57,9 +36,10 @@ func Init(cfg LogSDKConfig) {
 	if cfg.BufferSize > 0 {
 		bufferSize = cfg.BufferSize
 	}
+	conn, _ := utils.NewKratosGrpcConn(cfg.RegisterDiscoveryConfig)
 
 	globalLoggerSDK = &SDK{
-		conn:    initConn(cfg.RegisterDiscoveryConfig),
+		conn:    conn,
 		channel: make(chan *Log, channelSize),
 	}
 

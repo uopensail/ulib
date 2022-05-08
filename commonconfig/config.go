@@ -11,10 +11,12 @@ type EtcdConfig struct {
 	Endpoints  []string `json:"endpoints" toml:"endpoints"`
 	PrefixPath string   `json:"prefix_path" toml:"prefix_path"`
 }
-
+type RegisterConfig struct {
+	EtcdConfig `json:"etcd" toml:"etcd"`
+}
 type ServerConfig struct {
 	HttpServerConfig `json:",inline" toml:",inline"`
-	EtcdConfig       `json:"etcd" toml:"etcd"`
+	RegisterConfig   `json:"register" toml:"register"`
 	ServiceEnv       map[string]string `json:"sevice_env" toml:"sevice_env"`
 	GRPCPort         int               `json:"grpc_port" toml:"grpc_port"`
 	HTTPSPort        int               `json:"https_port" toml:"https_port"`

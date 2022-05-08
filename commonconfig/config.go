@@ -7,8 +7,14 @@ type HttpServerConfig struct {
 	MaxHeaderBytes int `json:"max_header_bytes" toml:"max_header_bytes"`
 }
 
+type EtcdConfig struct {
+	Endpoints  []string `json:"endpoints" toml:"endpoints"`
+	PrefixPath string   `json:"prefix_path" toml:"prefix_path"`
+}
+
 type ServerConfig struct {
 	HttpServerConfig `json:",inline" toml:",inline"`
+	EtcdConfig       `json:"etcd" toml:"etcd"`
 	ServiceEnv       map[string]string `json:"sevice_env" toml:"sevice_env"`
 	GRPCPort         int               `json:"grpc_port" toml:"grpc_port"`
 	HTTPSPort        int               `json:"https_port" toml:"https_port"`

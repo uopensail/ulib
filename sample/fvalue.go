@@ -306,13 +306,15 @@ func (fs FeaturesW) IntersectionLen(filed string, featB *FValue) int {
 	return 0
 }
 
-func MakeFeatures(tfs *Features) FeaturesW {
+func MakeFeaturesM(feats map[string]*Feature) FeaturesW {
 	ret := FeaturesW{
-		M:        make(map[string]FValue, len(tfs.Feature)),
-		Features: tfs,
+		M: make(map[string]FValue, len(feats)),
+		Features: &Features{
+			Feature: feats,
+		},
 	}
 
-	for k, v := range tfs.Feature {
+	for k, v := range feats {
 		switch v.Kind.(type) {
 		case *Feature_BytesList:
 			vs := v.GetBytesList()
@@ -346,4 +348,8 @@ func MakeFeatures(tfs *Features) FeaturesW {
 		}
 	}
 	return ret
+}
+
+func MakeFeatures(tfs *Features) FeaturesW {
+	return MakeFeaturesM(tfs.Feature)
 }

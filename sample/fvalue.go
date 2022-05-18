@@ -112,26 +112,6 @@ func (fs FeaturesW) GetFValue(field string) (FValue, bool) {
 	}
 	return FValue{}, false
 }
-func (fs FeaturesW) GetInt64ListByKey(field string) []int64 {
-	if v, ok := fs.M[field]; ok {
-		return v.Int64List
-	}
-	return nil
-}
-
-func (fs FeaturesW) GetStringListByKey(field string) []string {
-	if v, ok := fs.M[field]; ok {
-		return v.StringList
-	}
-	return nil
-}
-
-func (fs FeaturesW) GeFloat32ListByKey(field string) []float32 {
-	if v, ok := fs.M[field]; ok {
-		return v.Float32List
-	}
-	return nil
-}
 
 func (fs FeaturesW) GetInt64(filed string) int64 {
 	if v, ok := fs.M[filed]; ok && len(v.Int64List) > 0 {
@@ -140,8 +120,8 @@ func (fs FeaturesW) GetInt64(filed string) int64 {
 	return 0
 }
 
-func (fs FeaturesW) TryGetFloat32(filed string) float32 {
-	if v, ok := fs.M[filed]; ok {
+func (fs FeaturesW) TryGetFloat32(field string) float32 {
+	if v, ok := fs.M[field]; ok {
 		switch v.FValueType {
 		case Float32ListFValueType:
 			if len(v.Float32List) > 0 {
@@ -161,36 +141,36 @@ func (fs FeaturesW) TryGetFloat32(filed string) float32 {
 	return 0
 }
 
-func (fs FeaturesW) GetFloat32(filed string) float32 {
-	if v, ok := fs.M[filed]; ok && len(v.Float32List) > 0 {
+func (fs FeaturesW) GetFloat32(field string) float32 {
+	if v, ok := fs.M[field]; ok && len(v.Float32List) > 0 {
 		return v.Float32List[0]
 	}
 	return 0
 }
 
-func (fs FeaturesW) GetString(filed string) string {
-	if v, ok := fs.M[filed]; ok && len(v.StringList) > 0 {
+func (fs FeaturesW) GetString(field string) string {
+	if v, ok := fs.M[field]; ok && len(v.StringList) > 0 {
 		return v.StringList[0]
 	}
 	return ""
 }
 
-func (fs FeaturesW) GetInt64List(filed string) []int64 {
-	if v, ok := fs.M[filed]; ok {
+func (fs FeaturesW) GetInt64List(field string) []int64 {
+	if v, ok := fs.M[field]; ok {
 		return v.Int64List
 	}
 	return nil
 }
 
-func (fs FeaturesW) GetFloat32List(filed string) []float32 {
-	if v, ok := fs.M[filed]; ok {
+func (fs FeaturesW) GetFloat32List(field string) []float32 {
+	if v, ok := fs.M[field]; ok {
 		return v.Float32List
 	}
 	return nil
 }
 
-func (fs FeaturesW) GetStringList(filed string) []string {
-	if v, ok := fs.M[filed]; ok {
+func (fs FeaturesW) GetStringList(field string) []string {
+	if v, ok := fs.M[field]; ok {
 		return v.StringList
 	}
 	return nil

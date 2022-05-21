@@ -3,6 +3,8 @@ package utils
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
+	"time"
 
 	etcd "github.com/go-kratos/kratos/contrib/registry/etcd/v2"
 	kgrpc "github.com/go-kratos/kratos/v2/transport/grpc"
@@ -55,4 +57,27 @@ func NewKratosHttpConn(rdConf commonconfig.RegisterDiscoveryConfig) (*khttp.Clie
 		return nil, err
 	}
 	return conn, nil
+
+}
+
+type Reference struct {
+	CloseHandler   func()
+	referenceCount int32
+}
+
+func (ref *Reference) Retain() {
+	atomic.AddInt32(&ref.referenceCount, 1)
+}
+func (ref *Reference) Release() {
+	atomic.AddInt32(&ref.referenceCount, -1)
+}
+
+func (ref *Reference) Free() {
+	for atomic.LoadInt32(&ref.referenceCount) > 0 {
+		time.Sleep(time.Second)
+	}
+	if ref.CloseHandler != nil {
+		ref.CloseHandler()
+	}
+
 }

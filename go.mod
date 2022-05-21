@@ -10,9 +10,9 @@ require (
 	github.com/go-kratos/kratos/v2 v2.2.2
 	github.com/golang/protobuf v1.5.2
 	github.com/kr/pretty v0.2.1 // indirect
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.11.1
 	github.com/satori/go.uuid v1.2.0 // indirect
-	go.etcd.io/etcd/client/v3 v3.5.0
+	go.etcd.io/etcd/client/v3 v3.5.4
 	go.uber.org/zap v1.17.0
 	golang.org/x/exp v0.0.0-20190121172915-509febef88a4
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect

@@ -10,9 +10,11 @@ import (
 func TestSDK(t *testing.T) {
 
 	cfg := LogSDKConfig{
-		PanguServer: commonconfig.PanguConfig{
-			ZKHosts:     []string{"127.0.0.1:2181"},
-			ServiceName: "pangu_server",
+		RegisterDiscoveryConfig: commonconfig.RegisterDiscoveryConfig{
+			EtcdConfig: commonconfig.EtcdConfig{
+				Endpoints: []string{"127.0.0.1:2181"},
+				Name:      "pangu_server",
+			},
 		},
 	}
 	Init(cfg)
@@ -20,7 +22,6 @@ func TestSDK(t *testing.T) {
 		log := &Log{
 			ProductId: "test",
 			UserId:    "user_" + strconv.Itoa(i),
-			Event:     "test",
 		}
 		Push(log)
 	}

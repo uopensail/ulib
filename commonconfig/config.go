@@ -7,15 +7,23 @@ type HttpServerConfig struct {
 	MaxHeaderBytes int `json:"max_header_bytes" toml:"max_header_bytes"`
 }
 
+type EtcdConfig struct {
+	Endpoints []string `json:"endpoints" toml:"endpoints"`
+	Name      string   `json:"name" toml:"name"`
+}
+type RegisterDiscoveryConfig struct {
+	EtcdConfig `json:"etcd" toml:"etcd"`
+}
 type ServerConfig struct {
-	HttpServerConfig `json:",inline" toml:",inline"`
-	ServiceEnv       map[string]string `json:"sevice_env" toml:"sevice_env"`
-	GRPCPort         int               `json:"grpc_port" toml:"grpc_port"`
-	HTTPSPort        int               `json:"https_port" toml:"https_port"`
-	ProjectName      string            `json:"project_name" toml:"project_name"`
-	PromePort        int               `json:"prome_port" toml:"prome_port"`
-	PProfPort        int               `json:"pprof_port" toml:"pprof_port"`
-	Debug            bool              `json:"debug" toml:"debug"`
+	HttpServerConfig        `json:",inline" toml:",inline"`
+	RegisterDiscoveryConfig `json:"register" toml:"register"`
+	ServiceEnv              map[string]string `json:"sevice_env" toml:"sevice_env"`
+	GRPCPort                int               `json:"grpc_port" toml:"grpc_port"`
+	HTTPSPort               int               `json:"https_port" toml:"https_port"`
+	ProjectName             string            `json:"project_name" toml:"project_name"`
+	PromePort               int               `json:"prome_port" toml:"prome_port"`
+	PProfPort               int               `json:"pprof_port" toml:"pprof_port"`
+	Debug                   bool              `json:"debug" toml:"debug"`
 }
 
 type MongoClientConfig struct {

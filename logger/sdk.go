@@ -6,23 +6,25 @@ import (
 
 	"github.com/uopensail/ulib/commonconfig"
 	"github.com/uopensail/ulib/prome"
+	"github.com/uopensail/ulib/utils"
 	"github.com/uopensail/ulib/zlog"
 	"go.uber.org/zap"
+	grpc "google.golang.org/grpc"
 )
 
 const defaultChannelSize = 1000
 const defaultBufferSize = 1000
 
 type LogSDKConfig struct {
-	PanguServer   commonconfig.PanguConfig `json:"pangu" toml:"pangu"`
-	ChannelSize   int                      `json:"channel_size" toml:"channel_size"`
-	BufferSize    int                      `json:"buffer_size" toml:"buffer_size"`
-	FlushInterval int                      `json:"flush_interval" toml:"flush_interval"`
+	commonconfig.RegisterDiscoveryConfig `json:"discovery" toml:"discovery"`
+	ChannelSize                          int `json:"channel_size" toml:"channel_size"`
+	BufferSize                           int `json:"buffer_size" toml:"buffer_size"`
+	FlushInterval                        int `json:"flush_interval" toml:"flush_interval"`
 }
 
 type SDK struct {
-	pangucli *panguClient
-	channel  chan *Log
+	conn    *grpc.ClientConn
+	channel chan *Log
 }
 
 func Init(cfg LogSDKConfig) {
@@ -34,10 +36,11 @@ func Init(cfg LogSDKConfig) {
 	if cfg.BufferSize > 0 {
 		bufferSize = cfg.BufferSize
 	}
+	conn, _ := utils.NewKratosGrpcConn(cfg.RegisterDiscoveryConfig)
 
 	globalLoggerSDK = &SDK{
-		pangucli: InitPanguClient(cfg.PanguServer.ServiceName, cfg.PanguServer.ZKHosts),
-		channel:  make(chan *Log, channelSize),
+		conn:    conn,
+		channel: make(chan *Log, channelSize),
 	}
 
 	flushInterval := 3
@@ -65,16 +68,14 @@ func (sdk *SDK) write(logs []*Log) {
 	stat := prome.NewStat("Logger.SDK.write")
 	defer stat.End()
 
-	cli := sdk.pangucli.GetRealClient()
-
-	if cli == nil {
+	if sdk.conn == nil {
 		stat.MarkErr()
 		return
 	}
 	req := &BatchRequest{
 		Logs: logs,
 	}
-	_, err := cli.Batch(context.Background(), req)
+	_, err := NewLogServerClient(sdk.conn).Batch(context.Background(), req)
 	if err != nil {
 		zlog.LOG.Error("Logger.SDK.write error", zap.Error(err))
 		stat.MarkErr()

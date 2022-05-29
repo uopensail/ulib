@@ -81,3 +81,20 @@ func (ref *Reference) Free() {
 	}
 
 }
+
+func (ref *Reference) LazyFree(lazySecond int) {
+	go func() {
+		if lazySecond <= 0 {
+			lazySecond = 3
+		}
+		time.Sleep(time.Second * time.Duration(lazySecond))
+
+		for atomic.LoadInt32(&ref.referenceCount) > 0 {
+			time.Sleep(time.Second)
+		}
+		if ref.CloseHandler != nil {
+			ref.CloseHandler()
+		}
+
+	}()
+}

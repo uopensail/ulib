@@ -60,7 +60,7 @@ func ListDir(dir string) ([]string, error) {
 	}
 
 	if dir[len(dir)-1] == '/' {
-		dir = dir[:len(dir)]
+		dir = dir[:len(dir)-1]
 	}
 	files, err := ioutil.ReadDir(dir)
 

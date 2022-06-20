@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package luban;
+
+option cc_enable_arenas = true;
+option java_outer_classname = "FeatureProtos";
+option java_multiple_files = true;
+option java_package = "org.luban.example";
+option go_package = "github.com/uopensail/ulib/luban";
+
+message BytesList {
+  repeated bytes value = 1;
+}
+message FloatList {
+  repeated float value = 1 [packed = true];
+}
+message Int64List {
+  repeated int64 value = 1 [packed = true];
+}
+message Uint64List {
+  repeated uint64 value = 1 [packed = true];
+}
+
+message Bytes {
+  bytes value = 1;
+}
+message Float {
+  float value = 1;
+}
+message Int64 {
+  int64 value = 1;
+}
+message Uint64 {
+  uint64 value = 1;
+}
+
+message Feature {
+  oneof kind {
+    BytesList bytes_list = 1;
+    FloatList float_list = 2;
+    Int64List int64_list = 3;
+    Uint64List uint64_list = 4;
+    Bytes bytes = 5;
+    Float float = 6;
+    Int64 int64 = 7;
+    Uint64 uint64 = 8;
+  }
+}
+
+message Features {
+  map<string, Feature> feature = 1;
+}
+
+message FeatureList {
+  repeated Feature feature = 1;
+}
+
+message FeatureLists {
+  map<string, FeatureList> feature_list = 1;
+}
+
+message Example {
+  Features features = 1;
+}

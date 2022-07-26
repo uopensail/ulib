@@ -28,12 +28,6 @@ func (cs *CombineSliceBuilder) CombineInt32s(vs []int32) []int32 {
 	return cs.combineInt32[cur:]
 }
 
-func (cs *CombineSliceBuilder) CombineInt64s(vs []int64) []int64 {
-	cur := len(cs.combineInt64)
-	cs.combineInt64 = append(cs.combineInt64, vs...)
-	return cs.combineInt64[cur:]
-}
-
 func (cs *CombineSliceBuilder) CombineStrings(vs []string) []string {
 	cur := len(cs.combineString)
 	cs.combineString = append(cs.combineString, vs...)

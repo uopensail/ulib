@@ -4,17 +4,22 @@ import "unsafe"
 
 //Thread unsafe
 type CombineSliceBuilder struct {
-	combineInt32  []int32
-	combineInt64  []int64
-	combineString []string
-	combineBytes  []byte
-	combineFloat  []float32
+	combineInt32   []int32
+	combineInt64   []int64
+	combineString  []string
+	combineBytes   []byte
+	combineFloat32 []float32
 }
 
 func (cs *CombineSliceBuilder) CombineInt64s(vs []int64) []int64 {
 	cur := len(cs.combineInt64)
 	cs.combineInt64 = append(cs.combineInt64, vs...)
 	return cs.combineInt64[cur:]
+}
+func (cs *CombineSliceBuilder) CombineFloat32s(vs []float32) []float32 {
+	cur := len(cs.combineFloat32)
+	cs.combineFloat32 = append(cs.combineFloat32, vs...)
+	return cs.combineFloat32[cur:]
 }
 func (cs *CombineSliceBuilder) CombineBytes(vs []byte) []byte {
 	cur := len(cs.combineBytes)

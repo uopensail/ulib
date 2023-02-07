@@ -1,9 +1,11 @@
 package prome
 
 import (
+	"bytes"
 	"encoding/json"
 	"math"
 	"math/rand"
+	"strconv"
 	"time"
 
 	"go.uber.org/zap"
@@ -14,6 +16,7 @@ import (
 const (
 	StatusOK int8 = iota
 	StatusERR
+	StatusMISS
 	StatusMax
 )
 
@@ -40,6 +43,10 @@ func (mi *MetricsItem) SampleRate(rate float32) *MetricsItem {
 
 func (mi *MetricsItem) MarkOk() *MetricsItem {
 	mi.status = StatusOK
+	return mi
+}
+func (mi *MetricsItem) MarkMiss() *MetricsItem {
+	mi.status = StatusMISS
 	return mi
 }
 
@@ -137,6 +144,7 @@ func (mInstance *MetricsInstance) tickerCollectInfos() {
 	if mInstance.metricsMap == nil || len(mInstance.metricsMap) <= 0 {
 		return
 	}
+	leCosts := []uint32{3, 6, 10, 15, 20, 25, 35, 45, 59, 98, 149, 200, 999}
 	metricsInfos := make([]MetricsInfo, len(mInstance.metricsMap)*int(StatusMax))
 	index := 0
 	now := time.Now().UnixNano()
@@ -153,7 +161,7 @@ func (mInstance *MetricsInstance) tickerCollectInfos() {
 				metricsInfos[index].QPS = float32(gather.total) / collectInterval
 
 				//计算cost bucket
-				leCosts := []uint32{3, 6, 10, 15, 20, 25, 35, 45, 59, 98, 149, 200, 999}
+
 				costBucket := make(map[float64]uint64, len(leCosts))
 				cbi := 0
 				bucketSum := uint64(0)
@@ -168,6 +176,8 @@ func (mInstance *MetricsInstance) tickerCollectInfos() {
 				metricsInfos[index].CostBucket = costBucket
 				if j == StatusOK {
 					metricsInfos[index].Status = "OK"
+				} else if j == StatusMISS {
+					metricsInfos[index].Status = "MISS"
 				} else {
 					metricsInfos[index].Status = "ERR"
 				}
@@ -219,15 +229,29 @@ type MetricsGather struct {
 }
 
 type MetricsInfo struct {
-	Name       string             `json:"name"`
-	Status     string             `json:"status"`
-	QPS        float32            `json:"qps"`
-	Total      int                `json:"total"`
-	AvgCost    float64            `json:"avg_cost"`
-	MaxCost    float64            `json:"max_cost"`
-	AvgCounter float32            `json:"avg_counter"`
-	Counter    float32            `json:"counter"`
-	CostBucket map[float64]uint64 `json:"-"`
+	Name       string  `json:"name"`
+	Status     string  `json:"status"`
+	QPS        float32 `json:"qps"`
+	Total      int     `json:"total"`
+	AvgCost    float64 `json:"avg_cost"`
+	MaxCost    float64 `json:"max_cost"`
+	AvgCounter float32 `json:"avg_counter"`
+	Counter    float32 `json:"counter"`
+	CostBucket MapFI   `json:"cost_bucket"`
+}
+type MapFI map[float64]uint64
+
+func (mi MapFI) MarshalJSON() ([]byte, error) {
+	bf := bytes.Buffer{}
+
+	for k, v := range mi {
+		bf.WriteString(strconv.FormatInt(int64(k), 10))
+		bf.WriteByte(':')
+		bf.WriteString(strconv.FormatUint(v, 10))
+		bf.WriteByte(',')
+	}
+	ret := bf.String()
+	return json.Marshal(ret[:len(ret)-1])
 }
 
 func (info *MetricsInfo) String() string {

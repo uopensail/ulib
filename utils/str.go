@@ -55,6 +55,16 @@ func UInt642String(v uint64) string {
 	return s
 }
 
+func Int642String(v int64) string {
+	s := strconv.FormatInt(v, 10)
+	return s
+}
+
+func Int322String(v int32) string {
+	s := strconv.FormatInt(int64(v), 10)
+	return s
+}
+
 func UInt322String(v uint32) string {
 	s := strconv.FormatUint(uint64(v), 10)
 	return s

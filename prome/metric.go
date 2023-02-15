@@ -1,10 +1,12 @@
 package prome
 
 import (
+	"bytes"
 	"encoding/json"
 	"math"
 	"math/rand"
 	"sort"
+	"strconv"
 	"time"
 
 	"go.uber.org/zap"
@@ -167,26 +169,26 @@ func (mInstance *MetricsInstance) startLoop() {
 
 }
 
-// func calcBucketIndex(ms uint32) int {
-// 	var bIndex int
-// 	if ms <= 50 {
-// 		bIndex = int(ms) - 1
-// 		if bIndex < 0 {
-// 			bIndex = 0
-// 		}
-// 	} else if ms > MetricsCostBucketMaxValue {
-// 		bIndex = MetricsCostBucketSize
-// 	} else {
-// 		bIndex = int((ms-51)/3 + 50)
-// 	}
-// 	return bIndex
-// }
+func calcBucketIndex(ms uint32) int {
+	var bIndex int
+	if ms <= 50 {
+		bIndex = int(ms) - 1
+		if bIndex < 0 {
+			bIndex = 0
+		}
+	} else if ms > MetricsCostBucketMaxValue {
+		bIndex = MetricsCostBucketSize
+	} else {
+		bIndex = int((ms-51)/3 + 50)
+	}
+	return bIndex
+}
 
 func (mInstance *MetricsInstance) tickerCollectInfos() {
 	if mInstance.metricsMap == nil || len(mInstance.metricsMap) <= 0 {
 		return
 	}
-	//leCosts := []uint32{3, 6, 10, 15, 20, 25, 35, 45, 59, 98, 149, 200, 999}
+	leCosts := []uint32{3, 6, 10, 15, 20, 25, 35, 45, 59, 98, 149, 200, 999}
 	metricsInfos := make([]MetricsInfo, len(mInstance.metricsMap)*int(StatusMax))
 	index := 0
 	now := time.Now().UnixNano()
@@ -206,18 +208,18 @@ func (mInstance *MetricsInstance) tickerCollectInfos() {
 				metricsInfos[index].P95Cost = float64(gather.items.GetP95().costTime) / float64(time.Millisecond)
 				metricsInfos[index].P99Cost = float64(gather.items.GetP99().costTime) / float64(time.Millisecond)
 				//计算cost bucket
-				// costBucket := make(map[float64]uint64, len(leCosts))
-				// cbi := 0
-				// bucketSum := uint64(0)
-				// for bi := 0; bi < len(leCosts); bi++ {
-				// 	leCost := leCosts[bi]
-				// 	endBucket := calcBucketIndex(leCost)
-				// 	for ; cbi <= endBucket; cbi++ {
-				// 		bucketSum += uint64(gather.costBucket[cbi])
-				// 	}
-				// 	costBucket[float64(leCost)] = bucketSum
-				// }
-				// metricsInfos[index].CostBucket = costBucket
+				costBucket := make(map[float64]uint64, len(leCosts))
+				cbi := 0
+				bucketSum := uint64(0)
+				for bi := 0; bi < len(leCosts); bi++ {
+					leCost := leCosts[bi]
+					endBucket := calcBucketIndex(leCost)
+					for ; cbi <= endBucket; cbi++ {
+						bucketSum += uint64(gather.costBucket[cbi])
+					}
+					costBucket[float64(leCost)] = bucketSum
+				}
+				metricsInfos[index].CostBucket = costBucket
 				if j == StatusOK {
 					metricsInfos[index].Status = "OK"
 				} else if j == StatusMISS {
@@ -258,19 +260,19 @@ func (mInstance *MetricsInstance) AddItem(mi *MetricsItem) {
 	gather.maxCost = math.Max(float64(mi.costTime), gather.maxCost)
 	gather.counter += mi.counter
 	//cost ms
-	// costMs := mi.costTime / int64(time.Millisecond)
-	// bIndex := calcBucketIndex(uint32(costMs))
-	// gather.costBucket[bIndex]++
+	costMs := mi.costTime / int64(time.Millisecond)
+	bIndex := calcBucketIndex(uint32(costMs))
+	gather.costBucket[bIndex]++
 	metricsInstance.metricsMap[mi.name] = gathers
 }
 
 type MetricsGather struct {
-	maxCost float64
-	sumCost int64
-	total   int
-	counter int
-	items   metricsItems
-	//costBucket [MetricsCostBucketSize + 1]uint32
+	maxCost    float64
+	sumCost    int64
+	total      int
+	counter    int
+	items      metricsItems
+	costBucket [MetricsCostBucketSize + 1]uint32
 }
 
 func newMetricsGather() *MetricsGather {
@@ -295,23 +297,23 @@ type MetricsInfo struct {
 	MaxCost    float64 `json:"max_cost"`
 	AvgCounter float32 `json:"avg_counter"`
 	Counter    float32 `json:"counter"`
-	//CostBucket MapFI   `json:"cost_bucket"`
+	CostBucket MapFI   `json:"cost_bucket"`
 }
 
-//type MapFI map[float64]uint64
+type MapFI map[float64]uint64
 
-// func (mi MapFI) MarshalJSON() ([]byte, error) {
-// 	bf := bytes.Buffer{}
+func (mi MapFI) MarshalJSON() ([]byte, error) {
+	bf := bytes.Buffer{}
 
-// 	for k, v := range mi {
-// 		bf.WriteString(strconv.FormatInt(int64(k), 10))
-// 		bf.WriteByte(':')
-// 		bf.WriteString(strconv.FormatUint(v, 10))
-// 		bf.WriteByte(',')
-// 	}
-// 	ret := bf.String()
-// 	return json.Marshal(ret[:len(ret)-1])
-// }
+	for k, v := range mi {
+		bf.WriteString(strconv.FormatInt(int64(k), 10))
+		bf.WriteByte(':')
+		bf.WriteString(strconv.FormatUint(v, 10))
+		bf.WriteByte(',')
+	}
+	ret := bf.String()
+	return json.Marshal(ret[:len(ret)-1])
+}
 
 func (info *MetricsInfo) String() string {
 	data, _ := json.Marshal(info)

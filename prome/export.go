@@ -90,7 +90,7 @@ func (exporter *Exporter) Describe(ch chan<- *prometheus.Desc) {
 func (exporter *Exporter) Collect(ch chan<- prometheus.Metric) {
 	defer func() {
 		if err := recover(); err != nil {
-			zlog.LOG.Error(fmt.Sprintf("exporter collect error:", err))
+			zlog.LOG.Error(fmt.Sprintf("exporter collect error:%v", err))
 		}
 	}()
 
@@ -123,8 +123,15 @@ func (exporter *Exporter) scrape(ch chan<- prometheus.Metric) {
 					float64(mi.AvgCost), labelvs...)
 				ch <- prometheus.MustNewConstMetric(exporter.maxCostTime, prometheus.GaugeValue,
 					float64(mi.MaxCost), labelvs...)
+				ch <- prometheus.MustNewConstMetric(exporter.p90CostTime, prometheus.GaugeValue,
+					float64(mi.P90Cost), labelvs...)
+				ch <- prometheus.MustNewConstMetric(exporter.p95CostTime, prometheus.GaugeValue,
+					float64(mi.P95Cost), labelvs...)
+				ch <- prometheus.MustNewConstMetric(exporter.p99CostTime, prometheus.GaugeValue,
+					float64(mi.P99Cost), labelvs...)
 				ch <- prometheus.MustNewConstHistogram(exporter.costBucket, uint64(mi.Total),
 					mi.AvgCost*float64(mi.Total), mi.CostBucket, labelvs...)
+
 			}
 		}
 	}

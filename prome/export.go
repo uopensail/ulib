@@ -19,6 +19,9 @@ type ServerExporter struct {
 
 	maxCostTime *prometheus.Desc
 	avgCounter  *prometheus.Desc
+	p90CostTime *prometheus.Desc
+	p95CostTime *prometheus.Desc
+	p99CostTime *prometheus.Desc
 	qps         *prometheus.Desc
 	avgCostTime *prometheus.Desc
 	costBucket  *prometheus.Desc
@@ -28,6 +31,9 @@ func NewServerExporter(namespace string) *ServerExporter {
 	serverE := ServerExporter{
 		maxCostTime: newServerDesc(namespace, "max_cost_time", "最大耗时"),
 		avgCostTime: newServerDesc(namespace, "avg_cost_time", "平均耗时"),
+		p90CostTime: newServerDesc(namespace, "p90_cost_time", "90分位点耗时"),
+		p95CostTime: newServerDesc(namespace, "p95_cost_time", "95分位点耗时"),
+		p99CostTime: newServerDesc(namespace, "p99_cost_time", "99分位点耗时"),
 		avgCounter:  newServerDesc(namespace, "avg_counter", "平均计数"),
 		qps:         newServerDesc(namespace, "qps", "qps"),
 		costBucket:  newServerDesc(namespace, "cost", "耗时分桶"),

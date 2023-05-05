@@ -10,11 +10,8 @@ require (
 	github.com/go-kratos/kratos/v2 v2.2.2
 	github.com/golang/protobuf v1.5.2
 	github.com/kr/pretty v0.2.1 // indirect
-	github.com/marianogappa/sqlparser v0.0.0-20210802195049-c86231987420
-	github.com/pingcap/tidb/parser v0.0.0-20221113022353-86d3b46555d7
 	github.com/prometheus/client_golang v1.11.1
 	github.com/satori/go.uuid v1.2.0 // indirect
-	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	go.etcd.io/etcd/client/v3 v3.5.4
 	go.uber.org/zap v1.18.1
 	golang.org/x/exp v0.0.0-20220428152302-39d4317da171
@@ -22,4 +19,5 @@ require (
 	google.golang.org/grpc v1.44.0
 	google.golang.org/protobuf v1.27.1
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
+	gorm.io/gorm v1.24.5
 )

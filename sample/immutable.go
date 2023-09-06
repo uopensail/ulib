@@ -9,8 +9,6 @@ import (
 	"github.com/bytedance/sonic"
 )
 
-const uintptrSize uintptr = unsafe.Sizeof(uintptr(0))
-const intSize uintptr = unsafe.Sizeof(int(0))
 const int64Size uintptr = unsafe.Sizeof(int64(0))
 const float32Size uintptr = unsafe.Sizeof(float32(0))
 const stringHeaderSize uintptr = unsafe.Sizeof(reflect.StringHeader{Data: 0, Len: 0})
@@ -49,23 +47,23 @@ func (f *ImmutableFeatures) GetString(key string) (string, error) {
 	return "", fmt.Errorf("key: %s not found", key)
 }
 
-func (f *ImmutableFeatures) GetInt64Array(key string) ([]int64, error) {
+func (f *ImmutableFeatures) GetInt64s(key string) ([]int64, error) {
 	if addr, ok := f.features[key]; ok {
-		return getInt64Array(addr)
+		return getInt64s(addr)
 	}
 	return nil, fmt.Errorf("key: %s not found", key)
 }
 
-func (f *ImmutableFeatures) GetFloat32Array(key string) ([]float32, error) {
+func (f *ImmutableFeatures) GetFloat32s(key string) ([]float32, error) {
 	if addr, ok := f.features[key]; ok {
-		return getFloat32Array(addr)
+		return getFloat32s(addr)
 	}
 	return nil, fmt.Errorf("key: %s not found", key)
 }
 
-func (f *ImmutableFeatures) GetStringArray(key string) ([]string, error) {
+func (f *ImmutableFeatures) GetStrings(key string) ([]string, error) {
 	if addr, ok := f.features[key]; ok {
-		return getStringArray(addr)
+		return getStrings(addr)
 	}
 	return nil, fmt.Errorf("key: %s not found", key)
 }
@@ -74,7 +72,7 @@ func (f *ImmutableFeatures) MarshalJSON() ([]byte, error) {
 	feas := make(map[string]interface{})
 
 	for key, addr := range f.features {
-		dtype := *(*DataType)(unsafe.Pointer(addr))
+		dtype := *(*DataType)(uintptr2Pointer(addr))
 		switch dtype {
 		case Int64Type:
 			v, _ := getInt64(addr)
@@ -103,31 +101,31 @@ func (f *ImmutableFeatures) MarshalJSON() ([]byte, error) {
 				StringType,
 				v,
 			}
-		case Int64ArrayType:
-			v, _ := getInt64Array(addr)
+		case Int64sType:
+			v, _ := getInt64s(addr)
 			feas[key] = struct {
 				Type  DataType `json:"type"`
 				Value []int64  `json:"value"`
 			}{
-				Int64ArrayType,
+				Int64sType,
 				v,
 			}
-		case Float32ArrayType:
-			v, _ := getFloat32Array(addr)
+		case Float32sType:
+			v, _ := getFloat32s(addr)
 			feas[key] = struct {
 				Type  DataType  `json:"type"`
 				Value []float32 `json:"value"`
 			}{
-				Float32ArrayType,
+				Float32sType,
 				v,
 			}
-		case StringArrayType:
-			v, _ := getStringArray(addr)
+		case StringsType:
+			v, _ := getStrings(addr)
 			feas[key] = struct {
 				Type  DataType `json:"type"`
 				Value []string `json:"value"`
 			}{
-				StringArrayType,
+				StringsType,
 				v,
 			}
 		}
@@ -138,7 +136,7 @@ func (f *ImmutableFeatures) MarshalJSON() ([]byte, error) {
 func (f *ImmutableFeatures) Mutable() *MutableFeatures {
 	ret := NewMutableFeatures()
 	for key, addr := range f.features {
-		dtype := *(*DataType)(unsafe.Pointer(addr))
+		dtype := *(*DataType)(uintptr2Pointer(addr))
 		switch dtype {
 		case Int64Type:
 			v, _ := getInt64(addr)
@@ -149,19 +147,19 @@ func (f *ImmutableFeatures) Mutable() *MutableFeatures {
 		case StringType:
 			v, _ := getString(addr)
 			ret.Features[key] = &String{Value: deepcopyOfString(v)}
-		case Int64ArrayType:
-			v, _ := getInt64Array(addr)
+		case Int64sType:
+			v, _ := getInt64s(addr)
 			nums := make([]int64, len(v))
 			copy(nums, v)
-			ret.Features[key] = &Int64Array{Value: nums}
-		case Float32ArrayType:
-			v, _ := getFloat32Array(addr)
+			ret.Features[key] = &Int64s{Value: nums}
+		case Float32sType:
+			v, _ := getFloat32s(addr)
 			nums := make([]float32, len(v))
 			copy(nums, v)
-			ret.Features[key] = &Float32Array{Value: nums}
-		case StringArrayType:
-			v, _ := getStringArray(addr)
-			ret.Features[key] = &StringArray{Value: deepcpyOfStringArray(v)}
+			ret.Features[key] = &Float32s{Value: nums}
+		case StringsType:
+			v, _ := getStrings(addr)
+			ret.Features[key] = &Strings{Value: deepcpyOfStrings(v)}
 		}
 	}
 	return ret
@@ -193,18 +191,18 @@ func (f *ImmutableFeatures) UnmarshalJSON(data []byte) error {
 			var str string
 			sonic.Unmarshal(value.Value, &str)
 			f.features[key] = putString(str, f.arena)
-		case Int64ArrayType:
+		case Int64sType:
 			var nums []int64
 			sonic.Unmarshal(value.Value, &nums)
-			f.features[key] = putInt64Array(nums, f.arena)
-		case Float32ArrayType:
+			f.features[key] = putInt64s(nums, f.arena)
+		case Float32sType:
 			var nums []float32
 			sonic.Unmarshal(value.Value, &nums)
-			f.features[key] = putFloat32Array(nums, f.arena)
-		case StringArrayType:
+			f.features[key] = putFloat32s(nums, f.arena)
+		case StringsType:
 			var strs []string
 			sonic.Unmarshal(value.Value, &strs)
-			f.features[key] = putStringArray(strs, f.arena)
+			f.features[key] = putStrings(strs, f.arena)
 		}
 	}
 	return nil
@@ -218,10 +216,10 @@ func putInt64(value int64, arena *Arena) uintptr {
 }
 
 func getInt64(addr uintptr) (int64, error) {
-	if *(*byte)(unsafe.Pointer(addr)) != byte(Int64Type) {
+	if *(*DataType)(uintptr2Pointer(addr)) != Int64Type {
 		return 0, fmt.Errorf("type mismatch")
 	}
-	return *(*int64)(unsafe.Pointer(addr + 8)), nil
+	return *(*int64)(uintptr2Pointer(addr + 8)), nil
 }
 
 func putFloat32(value float32, arena *Arena) uintptr {
@@ -232,157 +230,141 @@ func putFloat32(value float32, arena *Arena) uintptr {
 }
 
 func getFloat32(addr uintptr) (float32, error) {
-	if *(*byte)(unsafe.Pointer(addr)) != byte(Float32Type) {
+	if *(*DataType)(uintptr2Pointer(addr)) != Float32Type {
 		return 0.0, fmt.Errorf("type mismatch")
 	}
-	return *(*float32)(unsafe.Pointer(addr + 4)), nil
+	return *(*float32)(uintptr2Pointer(addr + 4)), nil
 }
 
 func putString(value string, arena *Arena) uintptr {
 	size := 8 + stringHeaderSize + uintptr(len(value))
-	if size&7 != 0 {
-		size = size - size&7 + 8
-	}
+	size = ((size + 7) >> 3) << 3
 	data := arena.allocate(size)
 	data[0] = byte(StringType)
-	*(*uintptr)(unsafe.Pointer(&data[8])) = uintptr(unsafe.Pointer(&data[8+stringHeaderSize]))
-	*(*int)(unsafe.Pointer(&data[8+uintptrSize])) = len(value)
+	header := (*reflect.StringHeader)(unsafe.Pointer(&data[8]))
+	header.Data = uintptr(unsafe.Pointer(&data[8+stringHeaderSize]))
+	header.Len = len(value)
 	copy(data[8+stringHeaderSize:], *(*[]byte)(unsafe.Pointer(&value)))
 	return uintptr(unsafe.Pointer(&data[0]))
 }
 
 func getString(addr uintptr) (string, error) {
-	if *(*byte)(unsafe.Pointer(addr)) != byte(StringType) {
+	if *(*DataType)(uintptr2Pointer(addr)) != StringType {
 		return "", fmt.Errorf("type mismatch")
 	}
-	return *(*string)(unsafe.Pointer(addr + 8)), nil
+	return *(*string)(uintptr2Pointer(addr + 8)), nil
 }
 
-func putInt64Array(arr []int64, arena *Arena) uintptr {
-	data := arena.allocate(8 + sizeofInt64Array(arr))
-	data[0] = byte(Int64ArrayType)
-	copyInt64Array(arr, data[8:])
+func putInt64s(arr []int64, arena *Arena) uintptr {
+	data := arena.allocate(8 + sizeofInt64s(arr))
+	data[0] = byte(Int64sType)
+	packInts(arr, data[8:])
 	return uintptr(unsafe.Pointer(&data[0]))
 }
 
-func getInt64Array(addr uintptr) ([]int64, error) {
-	if *(*byte)(unsafe.Pointer(addr)) != byte(Int64ArrayType) {
+func getInt64s(addr uintptr) ([]int64, error) {
+	if *(*DataType)(uintptr2Pointer(addr)) != Int64sType {
 		return nil, fmt.Errorf("type mismatch")
 	}
-	return toInt64Array(addr + 8), nil
+	return unpackInts(addr + 8), nil
 }
 
-func putFloat32Array(arr []float32, arena *Arena) uintptr {
-	data := arena.allocate(8 + sizeofFloat32Array(arr))
-	data[0] = byte(Float32ArrayType)
-	copyFloat32Array(arr, data[8:])
+func putFloat32s(arr []float32, arena *Arena) uintptr {
+	data := arena.allocate(8 + sizeofFloat32s(arr))
+	data[0] = byte(Float32sType)
+	packFloats(arr, data[8:])
 	return uintptr(unsafe.Pointer(&data[0]))
 }
 
-func getFloat32Array(addr uintptr) ([]float32, error) {
-	if *(*byte)(unsafe.Pointer(addr)) != byte(Float32ArrayType) {
+func getFloat32s(addr uintptr) ([]float32, error) {
+	if *(*DataType)(uintptr2Pointer(addr)) != Float32sType {
 		return nil, fmt.Errorf("type mismatch")
 	}
-	return toFloat32Array(addr + 8), nil
+	return unpackFloats(addr + 8), nil
 }
 
-func putStringArray(arr []string, arena *Arena) uintptr {
-	data := arena.allocate(8 + sizeofStringArray(arr))
-	data[0] = byte(StringArrayType)
-	copyStringArray(arr, data[8:])
+func putStrings(arr []string, arena *Arena) uintptr {
+	data := arena.allocate(8 + sizeofStrings(arr))
+	data[0] = byte(StringsType)
+	packStrs(arr, data[8:])
 	return uintptr(unsafe.Pointer(&data[0]))
 }
 
-func getStringArray(addr uintptr) ([]string, error) {
-	if *(*byte)(unsafe.Pointer(addr)) != byte(StringArrayType) {
+func getStrings(addr uintptr) ([]string, error) {
+	if *(*DataType)(uintptr2Pointer(addr)) != StringsType {
 		return nil, fmt.Errorf("type mismatch")
 	}
-	return toStringArray(addr + 8), nil
+	return unpackStrs(addr + 8), nil
 }
 
-func copyInt64Array(arr []int64, data []byte) {
+func packInts(arr []int64, data []byte) {
 	p := uintptr(unsafe.Pointer(&data[sliceHeaderSize]))
-	*(*uintptr)(unsafe.Pointer(&data[0])) = p
-	*(*int)(unsafe.Pointer(&data[uintptrSize])) = len(arr)
-	*(*int)(unsafe.Pointer(&data[uintptrSize+intSize])) = len(arr)
-
-	var intArr []int64
-	sliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&intArr))
-	sliceHeader.Len = len(arr)
-	sliceHeader.Cap = len(arr)
-	sliceHeader.Data = uintptr(unsafe.Pointer(&data[sliceHeaderSize]))
-	copy(intArr, arr)
+	slice := (*reflect.SliceHeader)(unsafe.Pointer(&data[0]))
+	slice.Data = p
+	slice.Cap = len(arr)
+	slice.Len = len(arr)
+	copy(*(*[]int64)(unsafe.Pointer(&data[0])), arr)
 }
 
-func toInt64Array(addr uintptr) []int64 {
-	return *(*[]int64)(unsafe.Pointer(addr))
+func unpackInts(addr uintptr) []int64 {
+	return *(*[]int64)(uintptr2Pointer(addr))
 }
 
-func sizeofInt64Array(arr []int64) uintptr {
-	size := sliceHeaderSize + int64Size*uintptr(len(arr))
-	return size
+func sizeofInt64s(arr []int64) uintptr {
+	return sliceHeaderSize + int64Size*uintptr(len(arr))
 }
 
-func copyFloat32Array(arr []float32, data []byte) {
+func packFloats(arr []float32, data []byte) {
 	p := uintptr(unsafe.Pointer(&data[sliceHeaderSize]))
-	*(*uintptr)(unsafe.Pointer(&data[0])) = p
-	*(*int)(unsafe.Pointer(&data[uintptrSize])) = len(arr)
-	*(*int)(unsafe.Pointer(&data[uintptrSize+intSize])) = len(arr)
-
-	var float32Arr []float32
-	sliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&float32Arr))
-	sliceHeader.Len = len(arr)
-	sliceHeader.Cap = len(arr)
-	sliceHeader.Data = uintptr(unsafe.Pointer(&data[sliceHeaderSize]))
-	copy(float32Arr, arr)
+	slice := (*reflect.SliceHeader)(unsafe.Pointer(&data[0]))
+	slice.Data = p
+	slice.Cap = len(arr)
+	slice.Len = len(arr)
+	copy(*(*[]float32)(unsafe.Pointer(&data[0])), arr)
 }
 
-func toFloat32Array(addr uintptr) []float32 {
-	return *(*[]float32)(unsafe.Pointer(addr))
+func unpackFloats(addr uintptr) []float32 {
+	return *(*[]float32)(uintptr2Pointer(addr))
 }
 
-func sizeofFloat32Array(arr []float32) uintptr {
-	size := sliceHeaderSize + float32Size*uintptr(len(arr))
-	if size&7 != 0 {
-		size = size - size&7 + 8
-	}
-	return size
+func sizeofFloat32s(arr []float32) uintptr {
+	return ((sliceHeaderSize + float32Size*uintptr(len(arr)) + 7) >> 3) << 3
 }
 
-func copyStringArray(arr []string, data []byte) {
+func packStrs(arr []string, data []byte) {
 	p := uintptr(unsafe.Pointer(&data[sliceHeaderSize]))
-	*(*uintptr)(unsafe.Pointer(&data[0])) = p
-	*(*int)(unsafe.Pointer(&data[uintptrSize])) = len(arr)
-	*(*int)(unsafe.Pointer(&data[uintptrSize+intSize])) = len(arr)
+	slice := (*reflect.SliceHeader)(unsafe.Pointer(&data[0]))
+	slice.Data = p
+	slice.Cap = len(arr)
+	slice.Len = len(arr)
 	headerOffset := sliceHeaderSize
 	dataOffset := headerOffset + stringHeaderSize*uintptr(len(arr))
+	var str *reflect.StringHeader
 	var size uintptr
 	for i := 0; i < len(arr); i++ {
 		size = uintptr(len(arr[i]))
-		*(*uintptr)(unsafe.Pointer(&data[headerOffset])) = uintptr(unsafe.Pointer(&data[dataOffset]))
-		*(*int)(unsafe.Pointer(&data[headerOffset+uintptrSize])) = len(arr[i])
+		str = (*reflect.StringHeader)(unsafe.Pointer(&data[headerOffset]))
+		str.Data = uintptr(unsafe.Pointer(&data[dataOffset]))
+		str.Len = len(arr[i])
 		copy(data[dataOffset:dataOffset+size], *(*[]byte)(unsafe.Pointer(&arr[i])))
 		dataOffset += size
 		headerOffset += stringHeaderSize
 	}
 }
 
-func toStringArray(addr uintptr) []string {
-	return *(*[]string)(unsafe.Pointer(addr))
+func unpackStrs(addr uintptr) []string {
+	return *(*[]string)(uintptr2Pointer(addr))
 }
 
-func sizeofStringArray(arr []string) uintptr {
+func sizeofStrings(arr []string) uintptr {
 	size := sliceHeaderSize + stringHeaderSize*uintptr(len(arr))
 	for i := 0; i < len(arr); i++ {
 		size += uintptr(len(arr[i]))
 	}
-	if size&7 != 0 {
-		size = size - size&7 + 8
-	}
-	return size
+	return ((size + 7) >> 3) << 3
 }
 
-func deepcpyOfStringArray(arr []string) []string {
+func deepcpyOfStrings(arr []string) []string {
 	ret := make([]string, len(arr))
 	for i := 0; i < len(arr); i++ {
 		ret[i] = deepcopyOfString(arr[i])
@@ -390,9 +372,12 @@ func deepcpyOfStringArray(arr []string) []string {
 	return ret
 }
 
-func deepcopyOfString(s string) string {
-	b := []byte(s)
-	copyB := make([]byte, len(b))
-	copy(copyB, b)
-	return string(copyB)
+func deepcopyOfString(s string) (str string) {
+	data := make([]byte, len(s))
+	copy(data, *(*[]byte)(unsafe.Pointer(&s)))
+	return string(data)
+}
+
+func uintptr2Pointer(addr uintptr) unsafe.Pointer {
+	return unsafe.Pointer(addr)
 }

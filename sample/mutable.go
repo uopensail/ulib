@@ -46,37 +46,38 @@ func (f *MutableFeatures) GetString(key string) (string, error) {
 		if value.Type() != StringType {
 			return "", fmt.Errorf("type mismatch")
 		}
+
 		return value.(*String).Value, nil
 	}
 	return "", fmt.Errorf("key: %s not found", key)
 }
 
-func (f *MutableFeatures) GetInt64Array(key string) ([]int64, error) {
+func (f *MutableFeatures) GetInt64s(key string) ([]int64, error) {
 	if value, ok := f.Features[key]; ok {
-		if value.Type() != Int64ArrayType {
+		if value.Type() != Int64sType {
 			return nil, fmt.Errorf("type mismatch")
 		}
-		return value.(*Int64Array).Value, nil
+		return value.(*Int64s).Value, nil
 	}
 	return nil, fmt.Errorf("key: %s not found", key)
 }
 
-func (f *MutableFeatures) GetFloat32Array(key string) ([]float32, error) {
+func (f *MutableFeatures) GetFloat32s(key string) ([]float32, error) {
 	if value, ok := f.Features[key]; ok {
-		if value.Type() != Float32ArrayType {
+		if value.Type() != Float32sType {
 			return nil, fmt.Errorf("type mismatch")
 		}
-		return value.(*Float32Array).Value, nil
+		return value.(*Float32s).Value, nil
 	}
 	return nil, fmt.Errorf("key: %s not found", key)
 }
 
-func (f *MutableFeatures) GetStringArray(key string) ([]string, error) {
+func (f *MutableFeatures) GetStrings(key string) ([]string, error) {
 	if value, ok := f.Features[key]; ok {
-		if value.Type() != StringArrayType {
+		if value.Type() != StringsType {
 			return nil, fmt.Errorf("type mismatch")
 		}
-		return value.(*StringArray).Value, nil
+		return value.(*Strings).Value, nil
 	}
 	return nil, fmt.Errorf("key: %s not found", key)
 }
@@ -109,29 +110,29 @@ func (f *MutableFeatures) MarshalJSON() ([]byte, error) {
 				StringType,
 				value.(*String).Value,
 			}
-		case Int64ArrayType:
+		case Int64sType:
 			feas[key] = struct {
 				Type  DataType `json:"type"`
 				Value []int64  `json:"value"`
 			}{
-				Int64ArrayType,
-				value.(*Int64Array).Value,
+				Int64sType,
+				value.(*Int64s).Value,
 			}
-		case Float32ArrayType:
+		case Float32sType:
 			feas[key] = struct {
 				Type  DataType  `json:"type"`
 				Value []float32 `json:"value"`
 			}{
-				Float32ArrayType,
-				value.(*Float32Array).Value,
+				Float32sType,
+				value.(*Float32s).Value,
 			}
-		case StringArrayType:
+		case StringsType:
 			feas[key] = struct {
 				Type  DataType `json:"type"`
 				Value []string `json:"value"`
 			}{
-				StringArrayType,
-				value.(*StringArray).Value,
+				StringsType,
+				value.(*Strings).Value,
 			}
 		}
 	}
@@ -164,18 +165,18 @@ func (f *MutableFeatures) UnmarshalJSON(data []byte) error {
 			var str string
 			sonic.Unmarshal(value.Value, &str)
 			f.Features[key] = &String{Value: str}
-		case Int64ArrayType:
+		case Int64sType:
 			var nums []int64
 			sonic.Unmarshal(value.Value, &nums)
-			f.Features[key] = &Int64Array{Value: nums}
-		case Float32ArrayType:
+			f.Features[key] = &Int64s{Value: nums}
+		case Float32sType:
 			var nums []float32
 			sonic.Unmarshal(value.Value, &nums)
-			f.Features[key] = &Float32Array{Value: nums}
-		case StringArrayType:
+			f.Features[key] = &Float32s{Value: nums}
+		case StringsType:
 			var strs []string
 			sonic.Unmarshal(value.Value, &strs)
-			f.Features[key] = &StringArray{Value: strs}
+			f.Features[key] = &Strings{Value: strs}
 		}
 	}
 	return nil
@@ -189,12 +190,12 @@ func (f *Int64) Type() DataType {
 	return Int64Type
 }
 
-type Int64Array struct {
+type Int64s struct {
 	Value []int64
 }
 
-func (f *Int64Array) Type() DataType {
-	return Int64ArrayType
+func (f *Int64s) Type() DataType {
+	return Int64sType
 }
 
 type Float32 struct {
@@ -205,12 +206,12 @@ func (f *Float32) Type() DataType {
 	return Float32Type
 }
 
-type Float32Array struct {
+type Float32s struct {
 	Value []float32
 }
 
-func (f *Float32Array) Type() DataType {
-	return Float32ArrayType
+func (f *Float32s) Type() DataType {
+	return Float32sType
 }
 
 type String struct {
@@ -221,10 +222,10 @@ func (f *String) Type() DataType {
 	return StringType
 }
 
-type StringArray struct {
+type Strings struct {
 	Value []string
 }
 
-func (f *StringArray) Type() DataType {
-	return StringArrayType
+func (f *Strings) Type() DataType {
+	return StringsType
 }

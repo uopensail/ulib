@@ -26,6 +26,21 @@ func NewImmutableFeatures(arena *Arena) *ImmutableFeatures {
 	}
 }
 
+func (f *ImmutableFeatures) GetType(key string) DataType {
+	if addr, ok := f.features[key]; ok {
+		return *(*DataType)(uintptr2Pointer(addr))
+	}
+	return ErrorType
+}
+
+func (f *ImmutableFeatures) Keys() []string {
+	ret := make([]string, 0, len(f.features))
+	for key := range f.features {
+		ret = append(ret, key)
+	}
+	return ret
+}
+
 func (f *ImmutableFeatures) GetInt64(key string) (int64, error) {
 	if addr, ok := f.features[key]; ok {
 		return getInt64(addr)
@@ -140,26 +155,26 @@ func (f *ImmutableFeatures) Mutable() *MutableFeatures {
 		switch dtype {
 		case Int64Type:
 			v, _ := getInt64(addr)
-			ret.Features[key] = &Int64{Value: v}
+			ret.features[key] = &Int64{Value: v}
 		case Float32Type:
 			v, _ := getFloat32(addr)
-			ret.Features[key] = &Float32{Value: v}
+			ret.features[key] = &Float32{Value: v}
 		case StringType:
 			v, _ := getString(addr)
-			ret.Features[key] = &String{Value: deepcopyOfString(v)}
+			ret.features[key] = &String{Value: deepcopyOfString(v)}
 		case Int64sType:
 			v, _ := getInt64s(addr)
 			nums := make([]int64, len(v))
 			copy(nums, v)
-			ret.Features[key] = &Int64s{Value: nums}
+			ret.features[key] = &Int64s{Value: nums}
 		case Float32sType:
 			v, _ := getFloat32s(addr)
 			nums := make([]float32, len(v))
 			copy(nums, v)
-			ret.Features[key] = &Float32s{Value: nums}
+			ret.features[key] = &Float32s{Value: nums}
 		case StringsType:
 			v, _ := getStrings(addr)
-			ret.Features[key] = &Strings{Value: deepcpyOfStrings(v)}
+			ret.features[key] = &Strings{Value: deepcpyOfStrings(v)}
 		}
 	}
 	return ret

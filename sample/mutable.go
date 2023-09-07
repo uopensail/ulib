@@ -12,17 +12,32 @@ type Feature interface {
 }
 
 type MutableFeatures struct {
-	Features map[string]Feature
+	features map[string]Feature
 }
 
 func NewMutableFeatures() *MutableFeatures {
 	return &MutableFeatures{
-		Features: make(map[string]Feature),
+		features: make(map[string]Feature),
 	}
 }
 
+func (f *MutableFeatures) GetType(key string) DataType {
+	if feature, ok := f.features[key]; ok {
+		return feature.Type()
+	}
+	return ErrorType
+}
+
+func (f *MutableFeatures) Keys() []string {
+	ret := make([]string, 0, len(f.features))
+	for key := range f.features {
+		ret = append(ret, key)
+	}
+	return ret
+}
+
 func (f *MutableFeatures) GetInt64(key string) (int64, error) {
-	if value, ok := f.Features[key]; ok {
+	if value, ok := f.features[key]; ok {
 		if value.Type() != Int64Type {
 			return 0, fmt.Errorf("type mismatch")
 		}
@@ -32,7 +47,7 @@ func (f *MutableFeatures) GetInt64(key string) (int64, error) {
 }
 
 func (f *MutableFeatures) GetFloat32(key string) (float32, error) {
-	if value, ok := f.Features[key]; ok {
+	if value, ok := f.features[key]; ok {
 		if value.Type() != Float32Type {
 			return 0.0, fmt.Errorf("type mismatch")
 		}
@@ -42,7 +57,7 @@ func (f *MutableFeatures) GetFloat32(key string) (float32, error) {
 }
 
 func (f *MutableFeatures) GetString(key string) (string, error) {
-	if value, ok := f.Features[key]; ok {
+	if value, ok := f.features[key]; ok {
 		if value.Type() != StringType {
 			return "", fmt.Errorf("type mismatch")
 		}
@@ -53,7 +68,7 @@ func (f *MutableFeatures) GetString(key string) (string, error) {
 }
 
 func (f *MutableFeatures) GetInt64s(key string) ([]int64, error) {
-	if value, ok := f.Features[key]; ok {
+	if value, ok := f.features[key]; ok {
 		if value.Type() != Int64sType {
 			return nil, fmt.Errorf("type mismatch")
 		}
@@ -63,7 +78,7 @@ func (f *MutableFeatures) GetInt64s(key string) ([]int64, error) {
 }
 
 func (f *MutableFeatures) GetFloat32s(key string) ([]float32, error) {
-	if value, ok := f.Features[key]; ok {
+	if value, ok := f.features[key]; ok {
 		if value.Type() != Float32sType {
 			return nil, fmt.Errorf("type mismatch")
 		}
@@ -73,7 +88,7 @@ func (f *MutableFeatures) GetFloat32s(key string) ([]float32, error) {
 }
 
 func (f *MutableFeatures) GetStrings(key string) ([]string, error) {
-	if value, ok := f.Features[key]; ok {
+	if value, ok := f.features[key]; ok {
 		if value.Type() != StringsType {
 			return nil, fmt.Errorf("type mismatch")
 		}
@@ -84,7 +99,7 @@ func (f *MutableFeatures) GetStrings(key string) ([]string, error) {
 
 func (f *MutableFeatures) MarshalJSON() ([]byte, error) {
 	feas := make(map[string]interface{})
-	for key, value := range f.Features {
+	for key, value := range f.features {
 		switch value.Type() {
 		case Int64Type:
 			feas[key] = struct {
@@ -156,27 +171,27 @@ func (f *MutableFeatures) UnmarshalJSON(data []byte) error {
 		case Int64Type:
 			var num int64
 			sonic.Unmarshal(value.Value, &num)
-			f.Features[key] = &Int64{Value: num}
+			f.features[key] = &Int64{Value: num}
 		case Float32Type:
 			var num float32
 			sonic.Unmarshal(value.Value, &num)
-			f.Features[key] = &Float32{Value: num}
+			f.features[key] = &Float32{Value: num}
 		case StringType:
 			var str string
 			sonic.Unmarshal(value.Value, &str)
-			f.Features[key] = &String{Value: str}
+			f.features[key] = &String{Value: str}
 		case Int64sType:
 			var nums []int64
 			sonic.Unmarshal(value.Value, &nums)
-			f.Features[key] = &Int64s{Value: nums}
+			f.features[key] = &Int64s{Value: nums}
 		case Float32sType:
 			var nums []float32
 			sonic.Unmarshal(value.Value, &nums)
-			f.Features[key] = &Float32s{Value: nums}
+			f.features[key] = &Float32s{Value: nums}
 		case StringsType:
 			var strs []string
 			sonic.Unmarshal(value.Value, &strs)
-			f.Features[key] = &Strings{Value: strs}
+			f.features[key] = &Strings{Value: strs}
 		}
 	}
 	return nil

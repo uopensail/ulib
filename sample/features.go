@@ -13,6 +13,8 @@ const (
 )
 
 type Features interface {
+	GetType(string) DataType
+	Keys() []string
 	GetInt64(string) (int64, error)
 	GetFloat32(string) (float32, error)
 	GetString(string) (string, error)

@@ -117,7 +117,7 @@ type LocalResolverBuilder struct{}
 
 func (*LocalResolverBuilder) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver,
 	error) {
-	urlConfig := strings.TrimPrefix(target.Endpoint, "grpc://")
+	urlConfig := strings.TrimPrefix(target.Endpoint(), "grpc://")
 	urls := strings.Split(strings.Trim(urlConfig, " "), ",")
 	r := localResolver{
 		cc:        cc,

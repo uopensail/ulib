@@ -14,23 +14,55 @@ const float32Size uintptr = unsafe.Sizeof(float32(0))
 const stringHeaderSize uintptr = unsafe.Sizeof(reflect.StringHeader{Data: 0, Len: 0})
 const sliceHeaderSize uintptr = unsafe.Sizeof(reflect.SliceHeader{Data: 0, Len: 0, Cap: 0})
 
+type ImmutableFeature struct {
+	addr uintptr
+}
+
+func (f *ImmutableFeature) Type() DataType {
+	return *(*DataType)(uintptr2Pointer(f.addr))
+}
+
+func (f *ImmutableFeature) GetInt64() (int64, error) {
+	return getInt64(f.addr)
+}
+
+func (f *ImmutableFeature) GetFloat32() (float32, error) {
+	return getFloat32(f.addr)
+}
+
+func (f *ImmutableFeature) GetString() (string, error) {
+	return getString(f.addr)
+}
+
+func (f *ImmutableFeature) GetInt64s() ([]int64, error) {
+	return getInt64s(f.addr)
+}
+
+func (f *ImmutableFeature) GetFloat32s() ([]float32, error) {
+	return getFloat32s(f.addr)
+}
+
+func (f *ImmutableFeature) GetStrings() ([]string, error) {
+	return getStrings(f.addr)
+}
+
 type ImmutableFeatures struct {
 	arena    *Arena
-	features map[string]uintptr
+	features map[string]ImmutableFeature
 }
 
 func NewImmutableFeatures(arena *Arena) *ImmutableFeatures {
 	return &ImmutableFeatures{
 		arena:    arena,
-		features: make(map[string]uintptr),
+		features: make(map[string]ImmutableFeature),
 	}
 }
 
-func (f *ImmutableFeatures) GetType(key string) DataType {
-	if addr, ok := f.features[key]; ok {
-		return *(*DataType)(uintptr2Pointer(addr))
+func (f *ImmutableFeatures) Get(key string) *ImmutableFeature {
+	if fea, ok := f.features[key]; ok {
+		return &fea
 	}
-	return ErrorType
+	return nil
 }
 
 func (f *ImmutableFeatures) Keys() []string {
@@ -41,56 +73,14 @@ func (f *ImmutableFeatures) Keys() []string {
 	return ret
 }
 
-func (f *ImmutableFeatures) GetInt64(key string) (int64, error) {
-	if addr, ok := f.features[key]; ok {
-		return getInt64(addr)
-	}
-	return 0, fmt.Errorf("key: %s not found", key)
-}
-
-func (f *ImmutableFeatures) GetFloat32(key string) (float32, error) {
-	if addr, ok := f.features[key]; ok {
-		return getFloat32(addr)
-	}
-	return 0.0, fmt.Errorf("key: %s not found", key)
-}
-
-func (f *ImmutableFeatures) GetString(key string) (string, error) {
-	if addr, ok := f.features[key]; ok {
-		return getString(addr)
-	}
-	return "", fmt.Errorf("key: %s not found", key)
-}
-
-func (f *ImmutableFeatures) GetInt64s(key string) ([]int64, error) {
-	if addr, ok := f.features[key]; ok {
-		return getInt64s(addr)
-	}
-	return nil, fmt.Errorf("key: %s not found", key)
-}
-
-func (f *ImmutableFeatures) GetFloat32s(key string) ([]float32, error) {
-	if addr, ok := f.features[key]; ok {
-		return getFloat32s(addr)
-	}
-	return nil, fmt.Errorf("key: %s not found", key)
-}
-
-func (f *ImmutableFeatures) GetStrings(key string) ([]string, error) {
-	if addr, ok := f.features[key]; ok {
-		return getStrings(addr)
-	}
-	return nil, fmt.Errorf("key: %s not found", key)
-}
-
 func (f *ImmutableFeatures) MarshalJSON() ([]byte, error) {
 	feas := make(map[string]interface{})
 
-	for key, addr := range f.features {
-		dtype := *(*DataType)(uintptr2Pointer(addr))
+	for key, fea := range f.features {
+		dtype := fea.Type()
 		switch dtype {
 		case Int64Type:
-			v, _ := getInt64(addr)
+			v, _ := fea.GetInt64()
 			feas[key] = struct {
 				Type  DataType `json:"type"`
 				Value int64    `json:"value"`
@@ -99,7 +89,7 @@ func (f *ImmutableFeatures) MarshalJSON() ([]byte, error) {
 				v,
 			}
 		case Float32Type:
-			v, _ := getFloat32(addr)
+			v, _ := fea.GetFloat32()
 			feas[key] = struct {
 				Type  DataType `json:"type"`
 				Value float32  `json:"value"`
@@ -108,7 +98,7 @@ func (f *ImmutableFeatures) MarshalJSON() ([]byte, error) {
 				v,
 			}
 		case StringType:
-			v, _ := getString(addr)
+			v, _ := fea.GetString()
 			feas[key] = struct {
 				Type  DataType `json:"type"`
 				Value string   `json:"value"`
@@ -117,7 +107,7 @@ func (f *ImmutableFeatures) MarshalJSON() ([]byte, error) {
 				v,
 			}
 		case Int64sType:
-			v, _ := getInt64s(addr)
+			v, _ := fea.GetInt64s()
 			feas[key] = struct {
 				Type  DataType `json:"type"`
 				Value []int64  `json:"value"`
@@ -126,7 +116,7 @@ func (f *ImmutableFeatures) MarshalJSON() ([]byte, error) {
 				v,
 			}
 		case Float32sType:
-			v, _ := getFloat32s(addr)
+			v, _ := fea.GetFloat32s()
 			feas[key] = struct {
 				Type  DataType  `json:"type"`
 				Value []float32 `json:"value"`
@@ -135,7 +125,7 @@ func (f *ImmutableFeatures) MarshalJSON() ([]byte, error) {
 				v,
 			}
 		case StringsType:
-			v, _ := getStrings(addr)
+			v, _ := fea.GetStrings()
 			feas[key] = struct {
 				Type  DataType `json:"type"`
 				Value []string `json:"value"`
@@ -150,30 +140,30 @@ func (f *ImmutableFeatures) MarshalJSON() ([]byte, error) {
 
 func (f *ImmutableFeatures) Mutable() *MutableFeatures {
 	ret := NewMutableFeatures()
-	for key, addr := range f.features {
-		dtype := *(*DataType)(uintptr2Pointer(addr))
+	for key, fea := range f.features {
+		dtype := fea.Type()
 		switch dtype {
 		case Int64Type:
-			v, _ := getInt64(addr)
+			v, _ := fea.GetInt64()
 			ret.features[key] = &Int64{Value: v}
 		case Float32Type:
-			v, _ := getFloat32(addr)
+			v, _ := fea.GetFloat32()
 			ret.features[key] = &Float32{Value: v}
 		case StringType:
-			v, _ := getString(addr)
+			v, _ := fea.GetString()
 			ret.features[key] = &String{Value: deepcopyOfString(v)}
 		case Int64sType:
-			v, _ := getInt64s(addr)
+			v, _ := fea.GetInt64s()
 			nums := make([]int64, len(v))
 			copy(nums, v)
 			ret.features[key] = &Int64s{Value: nums}
 		case Float32sType:
-			v, _ := getFloat32s(addr)
+			v, _ := fea.GetFloat32s()
 			nums := make([]float32, len(v))
 			copy(nums, v)
 			ret.features[key] = &Float32s{Value: nums}
 		case StringsType:
-			v, _ := getStrings(addr)
+			v, _ := fea.GetStrings()
 			ret.features[key] = &Strings{Value: deepcpyOfStrings(v)}
 		}
 	}
@@ -197,27 +187,27 @@ func (f *ImmutableFeatures) UnmarshalJSON(data []byte) error {
 		case Int64Type:
 			var num int64
 			sonic.Unmarshal(value.Value, &num)
-			f.features[key] = putInt64(num, f.arena)
+			f.features[key] = ImmutableFeature{addr: putInt64(num, f.arena)}
 		case Float32Type:
 			var num float32
 			sonic.Unmarshal(value.Value, &num)
-			f.features[key] = putFloat32(num, f.arena)
+			f.features[key] = ImmutableFeature{addr: putFloat32(num, f.arena)}
 		case StringType:
 			var str string
 			sonic.Unmarshal(value.Value, &str)
-			f.features[key] = putString(str, f.arena)
+			f.features[key] = ImmutableFeature{addr: putString(str, f.arena)}
 		case Int64sType:
 			var nums []int64
 			sonic.Unmarshal(value.Value, &nums)
-			f.features[key] = putInt64s(nums, f.arena)
+			f.features[key] = ImmutableFeature{addr: putInt64s(nums, f.arena)}
 		case Float32sType:
 			var nums []float32
 			sonic.Unmarshal(value.Value, &nums)
-			f.features[key] = putFloat32s(nums, f.arena)
+			f.features[key] = ImmutableFeature{addr: putFloat32s(nums, f.arena)}
 		case StringsType:
 			var strs []string
 			sonic.Unmarshal(value.Value, &strs)
-			f.features[key] = putStrings(strs, f.arena)
+			f.features[key] = ImmutableFeature{addr: putStrings(strs, f.arena)}
 		}
 	}
 	return nil

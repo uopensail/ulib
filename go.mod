@@ -4,6 +4,8 @@ go 1.14
 
 require (
 	github.com/StackExchange/wmi v1.2.1 // indirect
+	github.com/aliyun/aliyun-oss-go-sdk v2.2.9+incompatible
+	github.com/aws/aws-sdk-go v1.45.16
 	github.com/bytedance/sonic v1.10.0
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect

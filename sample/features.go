@@ -9,18 +9,22 @@ const (
 	Int64sType
 	Float32sType
 	StringsType
-	ErrorType DataType = 255
+	ErrorType DataType = 127
 )
 
+type Feature interface {
+	Type() DataType
+	GetInt64() (int64, error)
+	GetFloat32() (float32, error)
+	GetString() (string, error)
+	GetInt64s() ([]int64, error)
+	GetFloat32s() ([]float32, error)
+	GetStrings() ([]string, error)
+}
+
 type Features interface {
-	GetType(string) DataType
 	Keys() []string
-	GetInt64(string) (int64, error)
-	GetFloat32(string) (float32, error)
-	GetString(string) (string, error)
-	GetInt64s(string) ([]int64, error)
-	GetFloat32s(string) ([]float32, error)
-	GetStrings(string) ([]string, error)
+	Get(string) Feature
 	MarshalJSON() ([]byte, error)
 	UnmarshalJSON(data []byte) error
 }

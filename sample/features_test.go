@@ -44,41 +44,41 @@ func TestFeatures(t *testing.T) {
 	//fmt.Printf("MutableFeatures: %v\n", mfea)
 
 	fmt.Println("Get Feature from immutableFeas")
-	v1, _ := immutableFeas.GetInt64("A")
+	v1, _ := immutableFeas.Get("A").GetInt64()
 	fmt.Printf("A: %v\n", v1)
 
-	v2, _ := immutableFeas.GetFloat32("B")
+	v2, _ := immutableFeas.Get("B").GetFloat32()
 	fmt.Printf("B: %v\n", v2)
 
-	v3, _ := immutableFeas.GetString("C")
+	v3, _ := immutableFeas.Get("C").GetString()
 	fmt.Printf("C: %v\n", v3)
 
-	v4, _ := immutableFeas.GetInt64s("D")
+	v4, _ := immutableFeas.Get("D").GetInt64s()
 	fmt.Printf("D: %v\n", v4)
 
-	v5, _ := immutableFeas.GetFloat32s("E")
+	v5, _ := immutableFeas.Get("E").GetFloat32s()
 	fmt.Printf("E: %v\n", v5)
 
-	v6, _ := immutableFeas.GetStrings("F")
+	v6, _ := immutableFeas.Get("F").GetStrings()
 	fmt.Printf("F: %v\n", v6)
 
 	fmt.Println("Get Feature from mutableFeas")
-	v1, _ = mutableFeas.GetInt64("A")
+	v1, _ = mutableFeas.Get("A").GetInt64()
 	fmt.Printf("A: %v\n", v1)
 
-	v2, _ = mutableFeas.GetFloat32("B")
+	v2, _ = mutableFeas.Get("B").GetFloat32()
 	fmt.Printf("B: %v\n", v2)
 
-	v3, _ = mutableFeas.GetString("C")
+	v3, _ = mutableFeas.Get("C").GetString()
 	fmt.Printf("C: %v\n", v3)
 
-	v4, _ = mutableFeas.GetInt64s("D")
+	v4, _ = mutableFeas.Get("D").GetInt64s()
 	fmt.Printf("D: %v\n", v4)
 
-	v5, _ = mutableFeas.GetFloat32s("E")
+	v5, _ = mutableFeas.Get("E").GetFloat32s()
 	fmt.Printf("E: %v\n", v5)
 
-	v6, _ = mutableFeas.GetStrings("F")
+	v6, _ = mutableFeas.Get("F").GetStrings()
 	fmt.Printf("F: %v\n", v6)
 
 	fmt.Println("immutableFeas -> mutableFeas")
@@ -86,22 +86,22 @@ func TestFeatures(t *testing.T) {
 	mutableFeas = immutableFeas.Mutable()
 
 	fmt.Println("Get Feature from mutableFeas")
-	v1, _ = mutableFeas.GetInt64("A")
+	v1, _ = mutableFeas.Get("A").GetInt64()
 	fmt.Printf("A: %v\n", v1)
 
-	v2, _ = mutableFeas.GetFloat32("B")
+	v2, _ = mutableFeas.Get("B").GetFloat32()
 	fmt.Printf("B: %v\n", v2)
 
-	v3, _ = mutableFeas.GetString("C")
+	v3, _ = mutableFeas.Get("C").GetString()
 	fmt.Printf("C: %v\n", v3)
 
-	v4, _ = mutableFeas.GetInt64s("D")
+	v4, _ = mutableFeas.Get("D").GetInt64s()
 	fmt.Printf("D: %v\n", v4)
 
-	v5, _ = mutableFeas.GetFloat32s("E")
+	v5, _ = mutableFeas.Get("E").GetFloat32s()
 	fmt.Printf("E: %v\n", v5)
 
-	v6, _ = mutableFeas.GetStrings("F")
+	v6, _ = mutableFeas.Get("F").GetStrings()
 	fmt.Printf("F: %v\n", v6)
 
 	fmt.Println("immutableFeas Marshal")
@@ -115,14 +115,14 @@ func TestFeatures(t *testing.T) {
 	count := 1000000
 	start := time.Now()
 	for i := 0; i < count; i++ {
-		mutableFeas.GetStrings("E")
+		mutableFeas.Get("E").GetStrings()
 	}
 	elapsed := time.Since(start)
 	fmt.Printf("mutableFeas time cost: %s\n", elapsed)
 
 	start = time.Now()
 	for i := 0; i < count; i++ {
-		immutableFeas.GetStrings("E")
+		immutableFeas.Get("E").GetStrings()
 	}
 	elapsed = time.Since(start)
 	fmt.Printf("immutableFeas time cost: %s\n", elapsed)

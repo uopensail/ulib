@@ -7,10 +7,6 @@ import (
 	"github.com/bytedance/sonic"
 )
 
-type Feature interface {
-	Type() DataType
-}
-
 type MutableFeatures struct {
 	features map[string]Feature
 }
@@ -36,65 +32,11 @@ func (f *MutableFeatures) Keys() []string {
 	return ret
 }
 
-func (f *MutableFeatures) GetInt64(key string) (int64, error) {
+func (f *MutableFeatures) Get(key string) Feature {
 	if value, ok := f.features[key]; ok {
-		if value.Type() != Int64Type {
-			return 0, fmt.Errorf("type mismatch")
-		}
-		return value.(*Int64).Value, nil
+		return value
 	}
-	return 0, fmt.Errorf("key: %s not found", key)
-}
-
-func (f *MutableFeatures) GetFloat32(key string) (float32, error) {
-	if value, ok := f.features[key]; ok {
-		if value.Type() != Float32Type {
-			return 0.0, fmt.Errorf("type mismatch")
-		}
-		return value.(*Float32).Value, nil
-	}
-	return 0.0, fmt.Errorf("key: %s not found", key)
-}
-
-func (f *MutableFeatures) GetString(key string) (string, error) {
-	if value, ok := f.features[key]; ok {
-		if value.Type() != StringType {
-			return "", fmt.Errorf("type mismatch")
-		}
-
-		return value.(*String).Value, nil
-	}
-	return "", fmt.Errorf("key: %s not found", key)
-}
-
-func (f *MutableFeatures) GetInt64s(key string) ([]int64, error) {
-	if value, ok := f.features[key]; ok {
-		if value.Type() != Int64sType {
-			return nil, fmt.Errorf("type mismatch")
-		}
-		return value.(*Int64s).Value, nil
-	}
-	return nil, fmt.Errorf("key: %s not found", key)
-}
-
-func (f *MutableFeatures) GetFloat32s(key string) ([]float32, error) {
-	if value, ok := f.features[key]; ok {
-		if value.Type() != Float32sType {
-			return nil, fmt.Errorf("type mismatch")
-		}
-		return value.(*Float32s).Value, nil
-	}
-	return nil, fmt.Errorf("key: %s not found", key)
-}
-
-func (f *MutableFeatures) GetStrings(key string) ([]string, error) {
-	if value, ok := f.features[key]; ok {
-		if value.Type() != StringsType {
-			return nil, fmt.Errorf("type mismatch")
-		}
-		return value.(*Strings).Value, nil
-	}
-	return nil, fmt.Errorf("key: %s not found", key)
+	return nil
 }
 
 func (f *MutableFeatures) MarshalJSON() ([]byte, error) {
@@ -197,7 +139,38 @@ func (f *MutableFeatures) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+type ErrorFeature struct{}
+
+func (f *ErrorFeature) Type() DataType {
+	return ErrorType
+}
+
+func (f *ErrorFeature) GetInt64() (int64, error) {
+	return 0, fmt.Errorf("not implemented")
+}
+
+func (f *ErrorFeature) GetFloat32() (float32, error) {
+	return 0.0, fmt.Errorf("not implemented")
+}
+
+func (f *ErrorFeature) GetString() (string, error) {
+	return "", fmt.Errorf("not implemented")
+}
+
+func (f *ErrorFeature) GetInt64s() ([]int64, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (f *ErrorFeature) GetFloat32s() ([]float32, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (f *ErrorFeature) GetStrings() ([]string, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 type Int64 struct {
+	ErrorFeature
 	Value int64
 }
 
@@ -205,7 +178,12 @@ func (f *Int64) Type() DataType {
 	return Int64Type
 }
 
+func (f *Int64) GetInt64() (int64, error) {
+	return f.Value, nil
+}
+
 type Int64s struct {
+	ErrorFeature
 	Value []int64
 }
 
@@ -213,7 +191,12 @@ func (f *Int64s) Type() DataType {
 	return Int64sType
 }
 
+func (f *Int64s) GetInt64s() ([]int64, error) {
+	return f.Value, nil
+}
+
 type Float32 struct {
+	ErrorFeature
 	Value float32
 }
 
@@ -221,7 +204,12 @@ func (f *Float32) Type() DataType {
 	return Float32Type
 }
 
+func (f *Float32) GetFloat32() (float32, error) {
+	return f.Value, nil
+}
+
 type Float32s struct {
+	ErrorFeature
 	Value []float32
 }
 
@@ -229,7 +217,12 @@ func (f *Float32s) Type() DataType {
 	return Float32sType
 }
 
+func (f *Float32s) GetFloat32s() ([]float32, error) {
+	return f.Value, nil
+}
+
 type String struct {
+	ErrorFeature
 	Value string
 }
 
@@ -237,10 +230,19 @@ func (f *String) Type() DataType {
 	return StringType
 }
 
+func (f *String) GetString() (string, error) {
+	return f.Value, nil
+}
+
 type Strings struct {
+	ErrorFeature
 	Value []string
 }
 
 func (f *Strings) Type() DataType {
 	return StringsType
+}
+
+func (f *Strings) GetStrings() ([]string, error) {
+	return f.Value, nil
 }

@@ -100,17 +100,7 @@ func (mi *MetricsItem) SetCounter(counter int) *MetricsItem {
 func (mi *MetricsItem) End() {
 	if mi.sampleRate >= 1 || rand.Float32() < mi.sampleRate {
 		mi.costTime = time.Now().UnixNano() - mi.costTime
-		select {
-		case metricsInstance.channel <- mi:
-		default:
-			// if channel is full, pop front, and try to push again
-			<-metricsInstance.channel
-			select {
-			case metricsInstance.channel <- mi:
-			default:
-				zlog.LOG.Warn("Metrics channel is full")
-			}
-		}
+		GlobalmetricsIns.Push(mi)
 	}
 }
 
@@ -122,7 +112,7 @@ type MetricsInstance struct {
 	lastMetricsInfos []MetricsInfo
 }
 
-var metricsInstance = &MetricsInstance{
+var GlobalmetricsIns = &MetricsInstance{
 	make(map[string][StatusMax]*MetricsGather),
 	make(chan *MetricsItem, MetricsChannelBuff),
 	time.Now().UnixNano(),
@@ -131,7 +121,7 @@ var metricsInstance = &MetricsInstance{
 }
 
 func init() {
-	go metricsInstance.startLoop()
+	go GlobalmetricsIns.startLoop()
 }
 
 func NewStat(name string) *MetricsItem {
@@ -241,7 +231,19 @@ func (mInstance *MetricsInstance) tickerCollectInfos() {
 	mInstance.lastTickerTime = now
 
 }
-
+func (mInstance *MetricsInstance) Push(mi *MetricsItem) {
+	select {
+	case mInstance.channel <- mi:
+	default:
+		// if channel is full, pop front, and try to push again
+		<-mInstance.channel
+		select {
+		case mInstance.channel <- mi:
+		default:
+			zlog.LOG.Warn("Metrics channel is full")
+		}
+	}
+}
 func (mInstance *MetricsInstance) AddItem(mi *MetricsItem) {
 	gathers, ok := mInstance.metricsMap[mi.name]
 	if ok == false {
@@ -263,7 +265,7 @@ func (mInstance *MetricsInstance) AddItem(mi *MetricsItem) {
 	costMs := mi.costTime / int64(time.Millisecond)
 	bIndex := calcBucketIndex(uint32(costMs))
 	gather.costBucket[bIndex]++
-	metricsInstance.metricsMap[mi.name] = gathers
+	GlobalmetricsIns.metricsMap[mi.name] = gathers
 }
 
 type MetricsGather struct {

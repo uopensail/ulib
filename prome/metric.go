@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	StatusOK int8 = iota
+	StatusUnset int8 = iota
+	StatusOK
 	StatusERR
 	StatusMISS
 	StatusMax
@@ -127,6 +128,7 @@ func init() {
 func NewStat(name string) *MetricsItem {
 	return &MetricsItem{
 		Name:       name,
+		Status:     StatusOK,
 		CostTime:   time.Now().UnixNano(),
 		sampleRate: 1.0,
 	}
@@ -135,6 +137,7 @@ func NewStat(name string) *MetricsItem {
 func NewCounterStat(name string, counter int) *MetricsItem {
 	return &MetricsItem{
 		Name:     name,
+		Status:   StatusOK,
 		CostTime: time.Now().UnixNano(),
 		Counter:  counter,
 	}

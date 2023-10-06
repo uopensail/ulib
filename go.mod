@@ -1,9 +1,10 @@
 module github.com/uopensail/ulib
 
-go 1.18
+go 1.19
 
 require (
 	github.com/aliyun/aliyun-oss-go-sdk v2.2.9+incompatible
+	github.com/antlr4-go/antlr v0.0.0-20230518091524-98b52378c522
 	github.com/antlr4-go/antlr/v4 v4.13.0
 	github.com/aws/aws-sdk-go v1.45.16
 	github.com/bytedance/sonic v1.10.0

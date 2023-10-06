@@ -2,12 +2,16 @@ package uno
 
 import (
 	"encoding/json"
+	"fmt"
 	"unsafe"
+
+	"github.com/uopensail/ulib/sample"
 )
 
+// define arithmetic expression interface
 type ArithmeticExpression interface {
 	Expression
-	GetDataType() DataType
+	GetDataType() sample.DataType
 	GetValue() unsafe.Pointer
 	Simplify() ArithmeticExpression
 }
@@ -17,8 +21,8 @@ type Int64 struct {
 	value int64
 }
 
-func (i *Int64) GetDataType() DataType {
-	return kInt64
+func (i *Int64) GetDataType() sample.DataType {
+	return sample.Int64Type
 }
 
 func (i *Int64) GetType() NodeType {
@@ -37,7 +41,7 @@ func (i *Int64) Trivial() bool {
 	return true
 }
 
-func (i *Int64) Marshal() ([]byte, error) {
+func (i *Int64) MarshalJSON() ([]byte, error) {
 	type jsonNode struct {
 		Id    int32    `json:"id"`
 		Ntype NodeType `json:"ntype"`
@@ -61,8 +65,8 @@ type Int64s struct {
 	value []int64
 }
 
-func (i *Int64s) GetDataType() DataType {
-	return kInt64s
+func (i *Int64s) GetDataType() sample.DataType {
+	return sample.Int64sType
 }
 
 func (i *Int64s) Trivial() bool {
@@ -81,7 +85,7 @@ func (i *Int64s) Simplify() ArithmeticExpression {
 	return i
 }
 
-func (i *Int64s) Marshal() ([]byte, error) {
+func (i *Int64s) MarshalJSON() ([]byte, error) {
 	type jsonNode struct {
 		Id    int32    `json:"id"`
 		Ntype NodeType `json:"ntype"`
@@ -105,8 +109,8 @@ type Float32 struct {
 	value float32
 }
 
-func (f *Float32) GetDataType() DataType {
-	return kFloat32
+func (f *Float32) GetDataType() sample.DataType {
+	return sample.Float32Type
 }
 
 func (f *Float32) Trivial() bool {
@@ -125,7 +129,7 @@ func (f *Float32) GetValue() unsafe.Pointer {
 	return unsafe.Pointer(&f.value)
 }
 
-func (f *Float32) Marshal() ([]byte, error) {
+func (f *Float32) MarshalJSON() ([]byte, error) {
 	type jsonNode struct {
 		Id    int32    `json:"id"`
 		Ntype NodeType `json:"ntype"`
@@ -149,8 +153,8 @@ type Float32s struct {
 	value []float32
 }
 
-func (f *Float32s) GetDataType() DataType {
-	return kFloat32s
+func (f *Float32s) GetDataType() sample.DataType {
+	return sample.Float32sType
 }
 
 func (i *Float32s) Trivial() bool {
@@ -169,7 +173,7 @@ func (f *Float32s) GetValue() unsafe.Pointer {
 	return unsafe.Pointer(&f.value)
 }
 
-func (f *Float32s) Marshal() ([]byte, error) {
+func (f *Float32s) MarshalJSON() ([]byte, error) {
 	type jsonNode struct {
 		Id    int32     `json:"id"`
 		Ntype NodeType  `json:"ntype"`
@@ -193,8 +197,8 @@ type String struct {
 	value string
 }
 
-func (s *String) GetDataType() DataType {
-	return kString
+func (s *String) GetDataType() sample.DataType {
+	return sample.StringType
 }
 
 func (s *String) GetType() NodeType {
@@ -213,7 +217,7 @@ func (f *String) GetValue() unsafe.Pointer {
 	return unsafe.Pointer(&f.value)
 }
 
-func (s *String) Marshal() ([]byte, error) {
+func (s *String) MarshalJSON() ([]byte, error) {
 	type jsonNode struct {
 		Id    int32    `json:"id"`
 		Ntype NodeType `json:"ntype"`
@@ -237,8 +241,8 @@ type Strings struct {
 	value []string
 }
 
-func (s *Strings) GetDataType() DataType {
-	return kStrings
+func (s *Strings) GetDataType() sample.DataType {
+	return sample.StringsType
 }
 
 func (s *Strings) Trivial() bool {
@@ -257,7 +261,7 @@ func (f *Strings) GetValue() unsafe.Pointer {
 	return unsafe.Pointer(&f.value)
 }
 
-func (s *Strings) Marshal() ([]byte, error) {
+func (s *Strings) MarshalJSON() ([]byte, error) {
 	type jsonNode struct {
 		Id    int32    `json:"id"`
 		Ntype NodeType `json:"ntype"`
@@ -279,10 +283,10 @@ func (s *Strings) ToList() []Expression {
 type Variable struct {
 	BaseExpression
 	value string
-	dtype DataType
+	dtype sample.DataType
 }
 
-func (v *Variable) GetDataType() DataType {
+func (v *Variable) GetDataType() sample.DataType {
 	return v.dtype
 }
 
@@ -302,12 +306,12 @@ func (v *Variable) GetValue() unsafe.Pointer {
 	panic("not implemented")
 }
 
-func (c *Variable) Marshal() ([]byte, error) {
+func (c *Variable) MarshalJSON() ([]byte, error) {
 	type jsonNode struct {
-		Id    int32    `json:"id"`
-		Ntype NodeType `json:"ntype"`
-		Value string   `json:"value"`
-		Dtype DataType `json:"dtype"`
+		Id    int32           `json:"id"`
+		Ntype NodeType        `json:"ntype"`
+		Value string          `json:"value"`
+		Dtype sample.DataType `json:"dtype"`
 	}
 
 	node := &jsonNode{
@@ -329,7 +333,19 @@ type Function struct {
 	args     []ArithmeticExpression
 }
 
-func (f *Function) GetDataType() DataType {
+func (f *Function) check() {
+	inputs := FUNCTION_IO_TYPES[f.function]["in"]
+	if len(inputs) != len(f.args) {
+		panic("function argument check failed")
+	}
+	for i := 0; i < len(f.args); i++ {
+		if f.args[i].GetDataType() != inputs[i] {
+			panic(fmt.Sprintf("function argument:%d type check failed", i))
+		}
+	}
+}
+
+func (f *Function) GetDataType() sample.DataType {
 	return FUNCTION_IO_TYPES[f.function]["out"][0]
 }
 
@@ -358,14 +374,29 @@ func (f *Function) Simplify() ArithmeticExpression {
 		return f
 	}
 
-	return f
+	dtype := f.GetDataType()
+	args := make([]unsafe.Pointer, len(f.args)+1)
+	for i := 0; i < len(f.args); i++ {
+		args[i] = f.args[i].GetValue()
+	}
+	if dtype == sample.Int64Type {
+		ret := call_for_int64(f.function, args)
+		return &Int64{value: ret}
+	} else if dtype == sample.Float32Type {
+		ret := call_for_float32(f.function, args)
+		return &Float32{value: ret}
+	} else if dtype == sample.StringType {
+		ret := call_for_string(f.function, args)
+		return &String{value: ret}
+	}
+	panic(fmt.Sprintf("datatype: %d not supported", dtype))
 }
 
 func (f *Function) GetValue() unsafe.Pointer {
 	panic("not implemented")
 }
 
-func (f *Function) Marshal() ([]byte, error) {
+func (f *Function) MarshalJSON() ([]byte, error) {
 	type jsonNode struct {
 		Id    int32                  `json:"id"`
 		Ntype NodeType               `json:"ntype"`

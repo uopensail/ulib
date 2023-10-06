@@ -3,8 +3,11 @@ package uno
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/uopensail/ulib/sample"
 )
 
+// define boolean expression interface
 type BooleanExpression interface {
 	Expression
 	Negation() BooleanExpression
@@ -32,7 +35,7 @@ func (l *Literal) Trivial() bool {
 	return true
 }
 
-func (l *Literal) Marshal() ([]byte, error) {
+func (l *Literal) MarshalJSON() ([]byte, error) {
 	type jsonNode struct {
 		Id    int32    `json:"id"`
 		Ntype NodeType `json:"ntype"`
@@ -97,7 +100,7 @@ func (a *And) Trivial() bool {
 	return tmp.Trivial()
 }
 
-func (a *And) Marshal() ([]byte, error) {
+func (a *And) MarshalJSON() ([]byte, error) {
 	type jsonNode struct {
 		Id    int32    `json:"id"`
 		Ntype NodeType `json:"ntype"`
@@ -170,7 +173,7 @@ func (o *Or) Trivial() bool {
 	return tmp.Trivial()
 }
 
-func (o *Or) Marshal() ([]byte, error) {
+func (o *Or) MarshalJSON() ([]byte, error) {
 	type jsonNode struct {
 		Id    int32    `json:"id"`
 		Ntype NodeType `json:"ntype"`
@@ -203,7 +206,7 @@ type Cmp struct {
 	left  ArithmeticExpression
 	right ArithmeticExpression
 	op    CmpType
-	dtype DataType
+	dtype sample.DataType
 }
 
 func (c *Cmp) GetType() NodeType {
@@ -235,13 +238,13 @@ func (c *Cmp) Simplify() BooleanExpression {
 		return c
 	}
 
-	if c.dtype == kInt64 {
+	if c.dtype == sample.Int64Type {
 		status := compare[int64](c.left.(*Int64).value, c.right.(*Int64).value, c.op)
 		return &Literal{value: status}
-	} else if c.dtype == kFloat32 {
+	} else if c.dtype == sample.Float32Type {
 		status := compare[float32](c.left.(*Float32).value, c.right.(*Float32).value, c.op)
 		return &Literal{value: status}
-	} else if c.dtype == kString {
+	} else if c.dtype == sample.StringType {
 		status := compare[string](c.left.(*String).value, c.right.(*String).value, c.op)
 		return &Literal{value: status}
 	}
@@ -255,14 +258,14 @@ func (c *Cmp) Trivial() bool {
 	return false
 }
 
-func (c *Cmp) Marshal() ([]byte, error) {
+func (c *Cmp) MarshalJSON() ([]byte, error) {
 	type jsonNode struct {
-		Id    int32    `json:"id"`
-		Ntype NodeType `json:"ntype"`
-		Dtype DataType `json:"dtype"`
-		Left  int32    `json:"left"`
-		Right int32    `json:"right"`
-		Cmp   CmpType  `json:"cmp"`
+		Id    int32           `json:"id"`
+		Ntype NodeType        `json:"ntype"`
+		Dtype sample.DataType `json:"dtype"`
+		Left  int32           `json:"left"`
+		Right int32           `json:"right"`
+		Cmp   CmpType         `json:"cmp"`
 	}
 
 	node := &jsonNode{
@@ -290,7 +293,7 @@ type In struct {
 	BaseExpression
 	left  ArithmeticExpression
 	right ArithmeticExpression
-	dtype DataType
+	dtype sample.DataType
 }
 
 func (i *In) GetType() NodeType {
@@ -308,14 +311,13 @@ func (i *In) Simplify() BooleanExpression {
 		return i
 	}
 
-	if i.dtype == kInt64 {
-
+	if i.dtype == sample.Int64Type {
 		status := inarray[int64](i.left.(*Int64).value, i.right.(*Int64s).value)
 		return &Literal{value: status}
-	} else if i.dtype == kFloat32 {
+	} else if i.dtype == sample.Float32Type {
 		status := inarray[float32](i.left.(*Float32).value, i.right.(*Float32s).value)
 		return &Literal{value: status}
-	} else if i.dtype == kString {
+	} else if i.dtype == sample.StringType {
 		status := inarray[string](i.left.(*String).value, i.right.(*Strings).value)
 		return &Literal{value: status}
 	}
@@ -326,13 +328,13 @@ func (i *In) Trivial() bool {
 	return i.left.Trivial()
 }
 
-func (i *In) Marshal() ([]byte, error) {
+func (i *In) MarshalJSON() ([]byte, error) {
 	type jsonNode struct {
-		Id    int32    `json:"id"`
-		Ntype NodeType `json:"ntype"`
-		Dtype DataType `json:"dtype"`
-		Left  int32    `json:"left"`
-		Right int32    `json:"right"`
+		Id    int32           `json:"id"`
+		Ntype NodeType        `json:"ntype"`
+		Dtype sample.DataType `json:"dtype"`
+		Left  int32           `json:"left"`
+		Right int32           `json:"right"`
 	}
 
 	node := &jsonNode{
@@ -348,7 +350,9 @@ func (i *In) Marshal() ([]byte, error) {
 func (i *In) ToList() []Expression {
 	exprs := make([]Expression, 0, 3)
 	left := i.left.ToList()
+	right := i.right.ToList()
 	exprs = append(exprs, left...)
+	exprs = append(exprs, right...)
 	exprs = append(exprs, i)
 	return exprs
 }
@@ -357,7 +361,7 @@ type NotIn struct {
 	BaseExpression
 	left  ArithmeticExpression
 	right ArithmeticExpression
-	dtype DataType
+	dtype sample.DataType
 }
 
 func (i *NotIn) GetId() int32 {
@@ -379,13 +383,13 @@ func (i *NotIn) Simplify() BooleanExpression {
 		return i
 	}
 
-	if i.dtype == kInt64 {
+	if i.dtype == sample.Int64Type {
 		status := inarray[int64](i.left.(*Int64).value, i.right.(*Int64s).value)
 		return &Literal{value: !status}
-	} else if i.dtype == kFloat32 {
+	} else if i.dtype == sample.Float32Type {
 		status := inarray[float32](i.left.(*Float32).value, i.right.(*Float32s).value)
 		return &Literal{value: !status}
-	} else if i.dtype == kString {
+	} else if i.dtype == sample.StringType {
 		status := inarray[string](i.left.(*String).value, i.right.(*Strings).value)
 		return &Literal{value: !status}
 	}
@@ -396,13 +400,13 @@ func (i *NotIn) Trivial() bool {
 	return i.left.Trivial()
 }
 
-func (i *NotIn) Marshal() ([]byte, error) {
+func (i *NotIn) MarshalJSON() ([]byte, error) {
 	type jsonNode struct {
-		Id    int32    `json:"id"`
-		Ntype NodeType `json:"ntype"`
-		Dtype DataType `json:"dtype"`
-		Left  int32    `json:"left"`
-		Right int32    `json:"right"`
+		Id    int32           `json:"id"`
+		Ntype NodeType        `json:"ntype"`
+		Dtype sample.DataType `json:"dtype"`
+		Left  int32           `json:"left"`
+		Right int32           `json:"right"`
 	}
 
 	node := &jsonNode{
@@ -418,7 +422,9 @@ func (i *NotIn) Marshal() ([]byte, error) {
 func (i *NotIn) ToList() []Expression {
 	exprs := make([]Expression, 0, 3)
 	left := i.left.ToList()
+	right := i.right.ToList()
 	exprs = append(exprs, left...)
+	exprs = append(exprs, right...)
 	exprs = append(exprs, i)
 	return exprs
 }

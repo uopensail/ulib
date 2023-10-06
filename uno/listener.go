@@ -4,12 +4,27 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/antlr4-go/antlr"
+	"github.com/uopensail/ulib/sample"
 )
 
 type Listener struct {
-	BaseunoListener
-	arithmetics Stack[ArithmeticExpression]
-	booleans    Stack[BooleanExpression]
+	*BaseunoListener
+	*antlr.DefaultErrorListener
+	arithmetics *Stack[ArithmeticExpression]
+	booleans    *Stack[BooleanExpression]
+}
+
+func NewListener() *Listener {
+	return &Listener{
+		arithmetics: NewStack[ArithmeticExpression](),
+		booleans:    NewStack[BooleanExpression](),
+	}
+}
+
+func (s *Listener) SyntaxError(recognizer antlr.Recognizer, offendingSymbol interface{}, line, column int, msg string, e antlr.RecognitionException) {
+	panic(fmt.Sprintf("line: %d column: %d: %s", line, column, msg))
 }
 
 // ExitCmpBooleanExpression is called when production CmpBooleanExpression is exited.
@@ -75,24 +90,24 @@ func (s *Listener) ExitNotInBooleanExpression(ctx *NotInBooleanExpressionContext
 	if ctx.DECIMAL_LIST() != nil {
 		list := s.parseDecimalList(ctx.DECIMAL_LIST().GetText())
 		array := &Float32s{value: list}
-		if expr.GetDataType() != kFloat32 {
+		if expr.GetDataType() != sample.Float32Type {
 			panic("DataType Mismatch")
 		}
-		s.booleans.Push(&NotIn{left: expr, right: array, dtype: kFloat32})
+		s.booleans.Push(&NotIn{left: expr, right: array, dtype: sample.Float32Type})
 	} else if ctx.INTEGER_LIST() != nil {
-		if expr.GetDataType() != kInt64 {
+		if expr.GetDataType() != sample.Int64Type {
 			panic("DataType Mismatch")
 		}
 		list := s.parseIntegerList(ctx.INTEGER_LIST().GetText())
 		array := &Int64s{value: list}
-		s.booleans.Push(&NotIn{left: expr, right: array, dtype: kInt64})
+		s.booleans.Push(&NotIn{left: expr, right: array, dtype: sample.Int64Type})
 	} else {
-		if expr.GetDataType() != kString {
+		if expr.GetDataType() != sample.StringType {
 			panic("DataType MisMatch")
 		}
 		list := s.parseStringList(ctx.STRING_LIST().GetText())
 		array := &Strings{value: list}
-		s.booleans.Push(&NotIn{left: expr, right: array, dtype: kString})
+		s.booleans.Push(&NotIn{left: expr, right: array, dtype: sample.StringType})
 	}
 }
 
@@ -106,26 +121,26 @@ func (s *Listener) ExitInBooleanExpression(ctx *InBooleanExpressionContext) {
 	expr := s.arithmetics.Pop()
 
 	if ctx.DECIMAL_LIST() != nil {
-		if expr.GetDataType() != kFloat32 {
+		if expr.GetDataType() != sample.Float32Type {
 			panic("DataType Mismatch")
 		}
 		list := s.parseDecimalList(ctx.DECIMAL_LIST().GetText())
 		array := &Float32s{value: list}
-		s.booleans.Push(&In{left: expr, right: array, dtype: kFloat32})
+		s.booleans.Push(&In{left: expr, right: array, dtype: sample.Float32Type})
 	} else if ctx.INTEGER_LIST() != nil {
-		if expr.GetDataType() != kInt64 {
+		if expr.GetDataType() != sample.Int64Type {
 			panic("DataType Mismatch")
 		}
 		list := s.parseIntegerList(ctx.INTEGER_LIST().GetText())
 		array := &Int64s{value: list}
-		s.booleans.Push(&In{left: expr, right: array, dtype: kInt64})
+		s.booleans.Push(&In{left: expr, right: array, dtype: sample.Int64Type})
 	} else {
-		if expr.GetDataType() != kString {
+		if expr.GetDataType() != sample.StringType {
 			panic("DataType Mismatch")
 		}
 		list := s.parseStringList(ctx.STRING_LIST().GetText())
 		array := &Strings{value: list}
-		s.booleans.Push(&In{left: expr, right: array, dtype: kString})
+		s.booleans.Push(&In{left: expr, right: array, dtype: sample.StringType})
 	}
 }
 
@@ -135,20 +150,16 @@ func (s *Listener) ExitAddArithmeticExpression(ctx *AddArithmeticExpressionConte
 	first := s.arithmetics.Pop()
 
 	if first.GetDataType() != second.GetDataType() {
-		panic("DataType mismatch")
+		panic("DataType Mismatch")
 	}
 
 	function := "addf"
-	if second.Trivial() {
-		second = second.Simplify()
-		if second.GetDataType() == kFloat32 {
-			function = "divf"
-		} else if second.GetDataType() == kInt64 {
-			function = "addi"
-		}
+	if first.GetDataType() == sample.Int64Type {
+		function = "addi"
 	}
 
 	tmp := &Function{function: function, args: []ArithmeticExpression{first, second}}
+	tmp.check()
 	s.arithmetics.Push(tmp)
 }
 
@@ -186,6 +197,7 @@ func (s *Listener) ExitFuncArithmeticExpression(ctx *FuncArithmeticExpressionCon
 	}
 
 	tmp := &Function{function: function, args: args}
+	tmp.check()
 	s.arithmetics.Push(tmp)
 }
 
@@ -194,19 +206,19 @@ func (s *Listener) ExitColumnArithmeticExpression(ctx *ColumnArithmeticExpressio
 	mark := ctx.Type_marker().GetText()
 	mark = strings.ToLower(mark)
 	column := ctx.IDENTIFIER().GetText()
-	dtype := kFloat32
+	dtype := sample.Float32Type
 	if mark == "[int64]" {
-		dtype = kInt64
+		dtype = sample.Int64Type
 	} else if mark == "[int64s]" {
-		dtype = kInt64s
+		dtype = sample.Int64sType
 	} else if mark == "[float32]" {
-		dtype = kFloat32
+		dtype = sample.Float32Type
 	} else if mark == "[float32s]" {
-		dtype = kFloat32s
+		dtype = sample.Float32sType
 	} else if mark == "[string]" {
-		dtype = kString
+		dtype = sample.StringType
 	} else if mark == "[strings]" {
-		dtype = kStrings
+		dtype = sample.StringsType
 	}
 	tmp := &Variable{value: column, dtype: dtype}
 	s.arithmetics.Push(tmp)
@@ -222,21 +234,24 @@ func (s *Listener) ExitDivArithmeticExpression(ctx *DivArithmeticExpressionConte
 	}
 
 	function := "divf"
+	if first.GetDataType() == sample.Int64Type {
+		function = "divi"
+	}
 	if second.Trivial() {
 		second = second.Simplify()
-		if second.GetDataType() == kFloat32 {
+		if second.GetDataType() == sample.Float32Type {
 			if second.(*Float32).value == 0.0 {
 				panic("Devide By Zero")
 			}
-		} else if second.GetDataType() == kInt64 {
+		} else if second.GetDataType() == sample.Int64Type {
 			if second.(*Int64).value == 0 {
 				panic("Devide By Zero")
 			}
-			function = "divi"
 		}
 	}
 
 	tmp := &Function{function: function, args: []ArithmeticExpression{first, second}}
+	tmp.check()
 	s.arithmetics.Push(tmp)
 }
 
@@ -245,19 +260,19 @@ func (s *Listener) ExitFieldColumnArithmeticExpression(ctx *FieldColumnArithmeti
 	mark := ctx.Type_marker().GetText()
 	mark = strings.ToLower(mark)
 	column := fmt.Sprintf("%s.%s", ctx.IDENTIFIER(0).GetText(), ctx.IDENTIFIER(1).GetText())
-	dtype := kFloat32
+	dtype := sample.Float32Type
 	if mark == "[int64]" {
-		dtype = kInt64
+		dtype = sample.Int64Type
 	} else if mark == "[int64s]" {
-		dtype = kInt64s
+		dtype = sample.Int64sType
 	} else if mark == "[float32]" {
-		dtype = kFloat32
+		dtype = sample.Float32Type
 	} else if mark == "[float32s]" {
-		dtype = kFloat32s
+		dtype = sample.Float32sType
 	} else if mark == "[string]" {
-		dtype = kString
+		dtype = sample.StringType
 	} else if mark == "[strings]" {
-		dtype = kStrings
+		dtype = sample.StringsType
 	}
 	tmp := &Variable{value: column, dtype: dtype}
 	s.arithmetics.Push(tmp)
@@ -271,11 +286,12 @@ func (s *Listener) ExitSubArithmeticExpression(ctx *SubArithmeticExpressionConte
 		panic("DataType Mismatch")
 	}
 	function := "subf"
-	if first.GetDataType() == kInt64 {
+	if first.GetDataType() == sample.Int64Type {
 		function = "subi"
 	}
 	tmp := &Function{function: function,
 		args: []ArithmeticExpression{first, second}}
+	tmp.check()
 	s.arithmetics.Push(tmp)
 }
 
@@ -287,7 +303,7 @@ func (s *Listener) ExitModArithmeticExpression(ctx *ModArithmeticExpressionConte
 		panic("DataType Mismatch")
 	}
 
-	if first.GetDataType() != kInt64 {
+	if first.GetDataType() != sample.Int64Type {
 		panic("DataType Must Be Int64")
 	}
 	if second.Trivial() {
@@ -297,7 +313,8 @@ func (s *Listener) ExitModArithmeticExpression(ctx *ModArithmeticExpressionConte
 		}
 	}
 
-	tmp := &Function{function: "modi", args: []ArithmeticExpression{first, second}}
+	tmp := &Function{function: "mod", args: []ArithmeticExpression{first, second}}
+	tmp.check()
 	s.arithmetics.Push(tmp)
 }
 
@@ -308,6 +325,7 @@ func (s *Listener) ExitRuntTimeFuncArithmeticExpression(ctx *RuntTimeFuncArithme
 		function: strings.ToLower(function),
 		args:     []ArithmeticExpression{},
 	}
+	tmp.check()
 	s.arithmetics.Push(tmp)
 }
 
@@ -319,13 +337,14 @@ func (s *Listener) ExitMulArithmeticExpression(ctx *MulArithmeticExpressionConte
 		panic("DataType Mismatch")
 	}
 	function := "mulf"
-	if first.GetDataType() == kInt64 {
+	if first.GetDataType() == sample.Int64Type {
 		function = "muli"
 	}
 	tmp := &Function{
 		function: function,
 		args:     []ArithmeticExpression{first, second},
 	}
+	tmp.check()
 	s.arithmetics.Push(tmp)
 }
 

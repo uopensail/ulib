@@ -213,9 +213,13 @@ func (f *ImmutableFeatures) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func setDataType(data []byte, dataType DataType) {
+	*(*DataType)(unsafe.Pointer(&data[0])) = dataType
+}
+
 func putInt64(value int64, arena *Arena) uintptr {
 	data := arena.allocate(8 + int64Size)
-	data[0] = byte(Int64Type)
+	setDataType(data, Int64Type)
 	*(*int64)(unsafe.Pointer(&data[8])) = value
 	return uintptr(unsafe.Pointer(&data[0]))
 }
@@ -229,7 +233,7 @@ func getInt64(addr uintptr) (int64, error) {
 
 func putFloat32(value float32, arena *Arena) uintptr {
 	data := arena.allocate(4 + float32Size)
-	data[0] = byte(Float32Type)
+	setDataType(data, Float32Type)
 	*(*float32)(unsafe.Pointer(&data[4])) = value
 	return uintptr(unsafe.Pointer(&data[0]))
 }
@@ -245,7 +249,7 @@ func putString(value string, arena *Arena) uintptr {
 	size := 8 + stringHeaderSize + uintptr(len(value))
 	size = ((size + 7) >> 3) << 3
 	data := arena.allocate(size)
-	data[0] = byte(StringType)
+	setDataType(data, StringType)
 	header := (*reflect.StringHeader)(unsafe.Pointer(&data[8]))
 	header.Data = uintptr(unsafe.Pointer(&data[8+stringHeaderSize]))
 	header.Len = len(value)
@@ -262,7 +266,7 @@ func getString(addr uintptr) (string, error) {
 
 func putInt64s(arr []int64, arena *Arena) uintptr {
 	data := arena.allocate(8 + sizeofInt64s(arr))
-	data[0] = byte(Int64sType)
+	setDataType(data, Int64sType)
 	packInts(arr, data[8:])
 	return uintptr(unsafe.Pointer(&data[0]))
 }
@@ -276,7 +280,7 @@ func getInt64s(addr uintptr) ([]int64, error) {
 
 func putFloat32s(arr []float32, arena *Arena) uintptr {
 	data := arena.allocate(8 + sizeofFloat32s(arr))
-	data[0] = byte(Float32sType)
+	setDataType(data, Float32sType)
 	packFloats(arr, data[8:])
 	return uintptr(unsafe.Pointer(&data[0]))
 }
@@ -290,7 +294,7 @@ func getFloat32s(addr uintptr) ([]float32, error) {
 
 func putStrings(arr []string, arena *Arena) uintptr {
 	data := arena.allocate(8 + sizeofStrings(arr))
-	data[0] = byte(StringsType)
+	setDataType(data, StringsType)
 	packStrs(arr, data[8:])
 	return uintptr(unsafe.Pointer(&data[0]))
 }

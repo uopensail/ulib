@@ -105,7 +105,7 @@ func (exporter *Exporter) Collect(ch chan<- prometheus.Metric) {
 func (exporter *Exporter) scrape(ch chan<- prometheus.Metric) {
 	exporter.totalScrapes.Inc()
 
-	minfo := metricsInstance.GetMetricsInfo()
+	minfo := GlobalmetricsIns.GetMetricsInfo()
 
 	if len(minfo) == 0 {
 		exporter.up.Set(0)

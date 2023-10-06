@@ -1,6 +1,6 @@
 package sample
 
-type DataType byte
+type DataType int32
 
 const (
 	Int64Type DataType = iota

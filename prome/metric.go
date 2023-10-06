@@ -30,10 +30,10 @@ const (
 )
 
 type MetricsItem struct {
-	name       string
-	counter    int
-	costTime   int64
-	status     int8
+	Name       string
+	Counter    int
+	CostTime   int64
+	Status     int8
 	sampleRate float32
 }
 
@@ -41,7 +41,7 @@ type metricsItems []*MetricsItem
 
 func (mi metricsItems) Len() int { return len(mi) }
 func (mi metricsItems) Less(i, j int) bool {
-	return mi[i].costTime < mi[j].costTime
+	return mi[i].CostTime < mi[j].CostTime
 }
 func (mi metricsItems) Swap(i, j int) {
 	mi[i], mi[j] = mi[j], mi[i]
@@ -79,27 +79,27 @@ func (mi *MetricsItem) SampleRate(rate float32) *MetricsItem {
 }
 
 func (mi *MetricsItem) MarkOk() *MetricsItem {
-	mi.status = StatusOK
+	mi.Status = StatusOK
 	return mi
 }
 func (mi *MetricsItem) MarkMiss() *MetricsItem {
-	mi.status = StatusMISS
+	mi.Status = StatusMISS
 	return mi
 }
 
 func (mi *MetricsItem) MarkErr() *MetricsItem {
-	mi.status = StatusERR
+	mi.Status = StatusERR
 	return mi
 }
 
 func (mi *MetricsItem) SetCounter(counter int) *MetricsItem {
-	mi.counter = counter
+	mi.Counter = counter
 	return mi
 }
 
 func (mi *MetricsItem) End() {
 	if mi.sampleRate >= 1 || rand.Float32() < mi.sampleRate {
-		mi.costTime = time.Now().UnixNano() - mi.costTime
+		mi.CostTime = time.Now().UnixNano() - mi.CostTime
 		GlobalmetricsIns.Push(mi)
 	}
 }
@@ -126,17 +126,17 @@ func init() {
 
 func NewStat(name string) *MetricsItem {
 	return &MetricsItem{
-		name:       name,
-		costTime:   time.Now().UnixNano(),
+		Name:       name,
+		CostTime:   time.Now().UnixNano(),
 		sampleRate: 1.0,
 	}
 }
 
 func NewCounterStat(name string, counter int) *MetricsItem {
 	return &MetricsItem{
-		name:     name,
-		costTime: time.Now().UnixNano(),
-		counter:  counter,
+		Name:     name,
+		CostTime: time.Now().UnixNano(),
+		Counter:  counter,
 	}
 }
 
@@ -194,9 +194,9 @@ func (mInstance *MetricsInstance) tickerCollectInfos() {
 				metricsInfos[index].MaxCost = gather.maxCost / float64(time.Millisecond)
 				metricsInfos[index].AvgCost = float64(gather.sumCost) / float64(gather.total) / float64(time.Millisecond)
 				metricsInfos[index].QPS = float32(gather.total) / collectInterval
-				metricsInfos[index].P90Cost = float64(gather.items.GetP90().costTime) / float64(time.Millisecond)
-				metricsInfos[index].P95Cost = float64(gather.items.GetP95().costTime) / float64(time.Millisecond)
-				metricsInfos[index].P99Cost = float64(gather.items.GetP99().costTime) / float64(time.Millisecond)
+				metricsInfos[index].P90Cost = float64(gather.items.GetP90().CostTime) / float64(time.Millisecond)
+				metricsInfos[index].P95Cost = float64(gather.items.GetP95().CostTime) / float64(time.Millisecond)
+				metricsInfos[index].P99Cost = float64(gather.items.GetP99().CostTime) / float64(time.Millisecond)
 				//计算cost bucket
 				costBucket := make(map[float64]uint64, len(leCosts))
 				cbi := 0
@@ -245,27 +245,27 @@ func (mInstance *MetricsInstance) Push(mi *MetricsItem) {
 	}
 }
 func (mInstance *MetricsInstance) AddItem(mi *MetricsItem) {
-	gathers, ok := mInstance.metricsMap[mi.name]
+	gathers, ok := mInstance.metricsMap[mi.Name]
 	if ok == false {
 		var gs [StatusMax]*MetricsGather
-		mInstance.metricsMap[mi.name] = gs
+		mInstance.metricsMap[mi.Name] = gs
 		gathers = gs
 	}
-	gather := gathers[mi.status]
+	gather := gathers[mi.Status]
 	if gather == nil {
 		gather = newMetricsGather()
-		gathers[mi.status] = gather
+		gathers[mi.Status] = gather
 	}
 	gather.push(mi)
 	gather.total++
-	gather.sumCost += mi.costTime
-	gather.maxCost = math.Max(float64(mi.costTime), gather.maxCost)
-	gather.counter += mi.counter
+	gather.sumCost += mi.CostTime
+	gather.maxCost = math.Max(float64(mi.CostTime), gather.maxCost)
+	gather.counter += mi.Counter
 	//cost ms
-	costMs := mi.costTime / int64(time.Millisecond)
+	costMs := mi.CostTime / int64(time.Millisecond)
 	bIndex := calcBucketIndex(uint32(costMs))
 	gather.costBucket[bIndex]++
-	GlobalmetricsIns.metricsMap[mi.name] = gathers
+	GlobalmetricsIns.metricsMap[mi.Name] = gathers
 }
 
 type MetricsGather struct {

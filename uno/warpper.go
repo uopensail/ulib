@@ -45,8 +45,7 @@ func call(function string, args []unsafe.Pointer) {
 
 func call_for_int64(function string, args []unsafe.Pointer) int64 {
 	call(function, args)
-	var ret int64
-	ret = *(*int64)(args[len(args)-1])
+	ret := *(*int64)(args[len(args)-1])
 	C.free(args[len(args)-1])
 	args[len(args)-1] = nil
 	return ret
@@ -54,8 +53,7 @@ func call_for_int64(function string, args []unsafe.Pointer) int64 {
 
 func call_for_float32(function string, args []unsafe.Pointer) float32 {
 	call(function, args)
-	var ret float32
-	ret = *(*float32)(args[len(args)-1])
+	ret := *(*float32)(args[len(args)-1])
 	C.free(args[len(args)-1])
 	args[len(args)-1] = nil
 	return ret

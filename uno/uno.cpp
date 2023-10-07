@@ -35,9 +35,12 @@ void uno_clean_varslice(void *expression, char *slice) {
   for (size_t i = 0; i < expr->columns.addr.size(); i++) {
     (*vars)[expr->columns.addr[i]] = nullptr;
   }
+
   for (size_t i = 0; i < vars->size(); i++) {
-    if ((*vars)[i] != nullptr) {
+    // expr->varslice[i]'s data is store in expr, DON'T release
+    if (expr->varslice[i] == nullptr && (*vars)[i] != nullptr) {
       free((*vars)[i]);
+      (*vars)[i] = nullptr;
     }
   }
 }
@@ -57,8 +60,8 @@ int uno_eval(void *expression, char *slice) {
   Expression *expr = (Expression *)expression;
   VarSlice *ptr = (VarSlice *)slice;
 
-  // copy for thread safety
-  VarSlice vars = *ptr;
+  // copy for safety
+  VarSlice vars(*ptr);
   int32_t status = (*expr)(&vars);
 
   for (size_t i = 0; i < vars.size(); i++) {
@@ -74,16 +77,16 @@ void uno_batch_eval(void *expression, char *slices, char *result) {
     return;
   }
   Expression *expr = (Expression *)expression;
-  Slice<VarSlice *> *array = (Slice<VarSlice *> *)slices;
+  Slice<VarSlice> *array = (Slice<VarSlice> *)slices;
 
   int32_t status = -1;
   Int32Slice *ret = (Int32Slice *)result;
   ret->len = array->size();
   VarSlice *ptr = nullptr;
   for (size_t i = 0; i < array->size(); i++) {
-    ptr = (*array)[i];
-    // copy for thread safety
-    VarSlice var = *ptr;
+    ptr = &(*array)[i];
+    // copy for safety
+    VarSlice var(*ptr);
     status = (*expr)(&var);
     (*ret)[i] = status;
     for (size_t i = 0; i < var.size(); i++) {

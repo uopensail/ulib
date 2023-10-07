@@ -39,6 +39,10 @@ func (f *MutableFeatures) Get(key string) Feature {
 	return nil
 }
 
+func (f *MutableFeatures) Sey(key string, value Feature) {
+	f.features[key] = value
+}
+
 func (f *MutableFeatures) MarshalJSON() ([]byte, error) {
 	feas := make(map[string]interface{})
 	for key, value := range f.features {

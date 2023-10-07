@@ -263,26 +263,32 @@ struct AndNode : Node {
     if ((*vars)[id] != nullptr) {
       return;
     }
-    if ((*vars)[left] == nullptr && (*vars)[right] == nullptr) {
-      (*vars)[id] = nullptr;
+
+    void *lv = (*vars)[left];
+    void *rv = (*vars)[right];
+    if (lv == nullptr && rv == nullptr) {
       return;
     }
 
-    if ((*vars)[left] != nullptr && !(*static_cast<bool *>((*vars)[left]))) {
+    if (lv != nullptr && !(*static_cast<bool *>(lv))) {
       bool *ret = (bool *)malloc(sizeof(bool));
       *ret = false;
       (*vars)[id] = ret;
       return;
     }
-    if ((*vars)[right] != nullptr && !(*static_cast<bool *>((*vars)[right]))) {
+
+    if (rv != nullptr && !(*static_cast<bool *>(rv))) {
       bool *ret = (bool *)malloc(sizeof(bool));
       *ret = false;
       (*vars)[id] = ret;
       return;
     }
-    bool *ret = (bool *)malloc(sizeof(bool));
-    *ret = true;
-    (*vars)[id] = ret;
+
+    if (lv != nullptr && rv != nullptr) {
+      bool *ret = (bool *)malloc(sizeof(bool));
+      *ret = true;
+      (*vars)[id] = ret;
+    }
   }
 };
 
@@ -304,7 +310,6 @@ struct OrNode : Node {
     void *rv = (*vars)[right];
 
     if (lv == nullptr && rv == nullptr) {
-      (*vars)[id] = nullptr;
       return;
     }
     if (lv != nullptr && *static_cast<bool *>(lv)) {
@@ -319,9 +324,12 @@ struct OrNode : Node {
       (*vars)[id] = ret;
       return;
     }
-    bool *ret = (bool *)malloc(sizeof(bool));
-    *ret = false;
-    (*vars)[id] = ret;
+
+    if (lv != nullptr && rv != nullptr) {
+      bool *ret = (bool *)malloc(sizeof(bool));
+      *ret = false;
+      (*vars)[id] = ret;
+    }
   }
 };
 

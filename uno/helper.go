@@ -5,13 +5,14 @@ import "github.com/uopensail/ulib/sample"
 type NodeType int32
 type CmpType int32
 
+// this order must be same as the order in node.hpp
 const (
 	kVarNode NodeType = iota
 	kInt64Node
-	kFloat32Node
-	kStringNode
 	kInt64SliceNode
+	kFloat32Node
 	kFloat32SliceNode
+	kStringNode
 	kStringSliceNode
 	kFunctionNode
 	kAndNode

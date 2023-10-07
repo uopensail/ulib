@@ -58,7 +58,7 @@ func NewImmutableFeatures(arena *Arena) *ImmutableFeatures {
 	}
 }
 
-func (f *ImmutableFeatures) Get(key string) *ImmutableFeature {
+func (f *ImmutableFeatures) Get(key string) Feature {
 	if fea, ok := f.features[key]; ok {
 		return &fea
 	}

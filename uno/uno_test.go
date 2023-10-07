@@ -6,7 +6,7 @@ import (
 )
 
 func TestEval(t *testing.T) {
-	condition := `a[int64] > (5+100)+100`
+	condition := `v[float32] > 1000.0+1.5+2.9`
 	instance, err := NewEvaluator(condition)
 	if err != nil {
 		fmt.Printf("%v\n", err)
@@ -14,7 +14,7 @@ func TestEval(t *testing.T) {
 	}
 	slice := instance.Allocate()
 	fmt.Printf("%v\n", slice)
-	err = instance.FillInt64("a", int64(1001), slice)
+	err = instance.FillFloat32("v", float32(1001), slice)
 	fmt.Printf("%v\n", err)
 
 	fmt.Printf("%v\n", slice)

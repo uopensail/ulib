@@ -39,7 +39,7 @@ func (f *MutableFeatures) Get(key string) Feature {
 	return nil
 }
 
-func (f *MutableFeatures) Sey(key string, value Feature) {
+func (f *MutableFeatures) Set(key string, value Feature) {
 	f.features[key] = value
 }
 

@@ -82,6 +82,16 @@ func NewSource(filepath string, keyField string) (*Source, error) {
 	return source, nil
 }
 
+func (s *Source) GetId(key string) int {
+	stat := prome.NewStat("Source.GetId")
+	defer stat.End()
+	if feas, ok := s.dict[key]; ok {
+		return feas.id
+	}
+	stat.MarkMiss()
+	return -1
+}
+
 func (s *Source) GetByKey(key string) *sample.ImmutableFeatures {
 	stat := prome.NewStat("Source.GetByKey")
 	defer stat.End()
@@ -178,8 +188,5 @@ func (s *Source) Release() {
 	defer stat.End()
 	for _, condition := range s.conditions {
 		condition.Release()
-	}
-	for name := range s.conditions {
-		s.conditions[name] = nil
 	}
 }

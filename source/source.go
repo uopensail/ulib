@@ -3,6 +3,7 @@ package source
 import (
 	"bufio"
 	"os"
+	"sort"
 	"unsafe"
 
 	"github.com/bytedance/sonic"
@@ -17,8 +18,6 @@ type wrapper struct {
 	features sample.ImmutableFeatures
 	id       int
 }
-
-type Collection []int
 
 type Source struct {
 	area        *sample.Arena
@@ -82,11 +81,12 @@ func NewSource(filepath string, keyField string) (*Source, error) {
 	return source, nil
 }
 
+// if not found, return -1
 func (s *Source) GetId(key string) int {
 	stat := prome.NewStat("Source.GetId")
 	defer stat.End()
-	if feas, ok := s.dict[key]; ok {
-		return feas.id
+	if w, ok := s.dict[key]; ok {
+		return w.id
 	}
 	stat.MarkMiss()
 	return -1
@@ -95,21 +95,21 @@ func (s *Source) GetId(key string) int {
 func (s *Source) GetByKey(key string) *sample.ImmutableFeatures {
 	stat := prome.NewStat("Source.GetByKey")
 	defer stat.End()
-	if feas, ok := s.dict[key]; ok {
-		return &feas.features
+	if w, ok := s.dict[key]; ok {
+		return &w.features
 	}
 	stat.MarkMiss()
 	return nil
 }
 
-func (s *Source) GetById(index int) *sample.ImmutableFeatures {
+func (s *Source) GetById(id int) *sample.ImmutableFeatures {
 	stat := prome.NewStat("Source.GetById")
 	defer stat.End()
-	if index < 0 || index >= len(s.array) {
+	if id < 0 || id >= len(s.array) {
 		stat.MarkMiss()
 		return nil
 	}
-	return &s.array[index].features
+	return &s.array[id].features
 }
 
 func (s *Source) Len() int {
@@ -126,18 +126,20 @@ func (s *Source) BuildCollection(name string, condition string) {
 		return
 	}
 	defer evaluator.Release()
+
 	var status int32
-	collection := make([]int, 0, 1024)
+	ret := make([]int, 0, 1024)
 	for i := 0; i < len(s.array); i++ {
 		slice := evaluator.Allocate()
 		evaluator.Fill(&s.array[i].features, slice)
 		status = evaluator.Eval(slice)
 		if status == 1 {
-			collection = append(collection, s.array[i].id)
+			ret = append(ret, s.array[i].id)
 		}
 	}
-	stat.SetCounter(len(collection))
-	s.collections[name] = collection
+	stat.SetCounter(len(ret))
+	s.collections[name] = ret
+	return
 }
 
 func (s *Source) GetCollection(name string) Collection {
@@ -181,6 +183,34 @@ func (s *Source) GetCondition(name string) *Condition {
 	}
 	stat.MarkMiss()
 	return nil
+}
+
+func (s *Source) Sort(collection Collection, key string, desc bool) []int {
+	stat := prome.NewStat("Source.Sort")
+	defer stat.End()
+	if len(key) == 0 {
+		stat.MarkErr()
+		zlog.LOG.Error("sort key is nil")
+		return collection
+	}
+	slice := make([]*wrapper, len(collection))
+	for i := 0; i < len(collection); i++ {
+		slice[i] = &s.array[collection[i]]
+	}
+	w := &wrappers{
+		slice: slice,
+		key:   key,
+		desc:  desc,
+	}
+	if len(key) > 0 {
+		sort.Stable(w)
+	}
+
+	for i := 0; i < w.Len(); i++ {
+		collection[i] = w.slice[i].id
+	}
+
+	return collection
 }
 
 func (s *Source) Release() {

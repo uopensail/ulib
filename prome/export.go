@@ -29,14 +29,14 @@ type ServerExporter struct {
 
 func NewServerExporter(namespace string) *ServerExporter {
 	serverE := ServerExporter{
-		maxCostTime: newServerDesc(namespace, "max_cost_time", "最大耗时"),
-		avgCostTime: newServerDesc(namespace, "avg_cost_time", "平均耗时"),
-		p90CostTime: newServerDesc(namespace, "p90_cost_time", "90分位点耗时"),
-		p95CostTime: newServerDesc(namespace, "p95_cost_time", "95分位点耗时"),
-		p99CostTime: newServerDesc(namespace, "p99_cost_time", "99分位点耗时"),
-		avgCounter:  newServerDesc(namespace, "avg_counter", "平均计数"),
-		qps:         newServerDesc(namespace, "qps", "qps"),
-		costBucket:  newServerDesc(namespace, "cost", "耗时分桶"),
+		maxCostTime: newServerDesc(namespace, "max_cost_time", "Max Cost Time"),
+		avgCostTime: newServerDesc(namespace, "avg_cost_time", "Average Cost Time"),
+		p90CostTime: newServerDesc(namespace, "p90_cost_time", "90th Percentile Of Cost Time"),
+		p95CostTime: newServerDesc(namespace, "p95_cost_time", "95th Percentile Of Cost Time"),
+		p99CostTime: newServerDesc(namespace, "p99_cost_time", "99th Percentile Of Cost Time"),
+		avgCounter:  newServerDesc(namespace, "avg_counter", "Average Counter"),
+		qps:         newServerDesc(namespace, "qps", "Queries Per Second"),
+		costBucket:  newServerDesc(namespace, "cost", "Bucket Of Cost Time"),
 	}
 	return &serverE
 }

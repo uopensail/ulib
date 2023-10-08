@@ -2,7 +2,7 @@ package datastruct
 
 import "unsafe"
 
-//Thread unsafe
+// Thread unsafe
 type CombineSliceBuilder struct {
 	combineInt32   []int32
 	combineInt64   []int64
@@ -16,11 +16,13 @@ func (cs *CombineSliceBuilder) CombineInt64s(vs []int64) []int64 {
 	cs.combineInt64 = append(cs.combineInt64, vs...)
 	return cs.combineInt64[cur:]
 }
+
 func (cs *CombineSliceBuilder) CombineFloat32s(vs []float32) []float32 {
 	cur := len(cs.combineFloat32)
 	cs.combineFloat32 = append(cs.combineFloat32, vs...)
 	return cs.combineFloat32[cur:]
 }
+
 func (cs *CombineSliceBuilder) CombineBytes(vs []byte) []byte {
 	cur := len(cs.combineBytes)
 	cs.combineBytes = append(cs.combineBytes, vs...)
@@ -38,6 +40,7 @@ func (cs *CombineSliceBuilder) CombineStrings(vs []string) []string {
 	cs.combineString = append(cs.combineString, vs...)
 	return cs.combineString[cur:]
 }
+
 func (cs *CombineSliceBuilder) CombineStringByte(vs []byte) string {
 	cur := len(cs.combineBytes)
 	cs.combineBytes = append(cs.combineBytes, vs...)

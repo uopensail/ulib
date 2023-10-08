@@ -36,23 +36,23 @@ func InitLogger(appName string, debug bool, logDir string) {
 		lv = zap.InfoLevel
 	}
 
-	//日志文件路径配置2
 	hook := lumberjack.Logger{
-		Filename:   logFilePath, // 日志文件路径
-		MaxSize:    100,         // 每个日志文件保存的最大尺寸 单位：M
-		MaxBackups: 20,          // 日志文件最多保存多少个备份
-		MaxAge:     14,          // 文件最多保存多少天
-		Compress:   true,        // 是否压缩
+		Filename:   logFilePath, // Log file path
+		MaxSize:    100,         // The maximum size of each log file saved in M
+		MaxBackups: 20,          // Maximum number of backups to log files
+		MaxAge:     14,          // The maximum number of days the file can be saved
+		Compress:   true,        // whether to compress
 	}
-	// 设置日志级别
+
+	// set log level
 	atomicLevel := zap.NewAtomicLevel()
 	atomicLevel.SetLevel(lv)
 
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	var cores []zapcore.Core
-	cores = append(cores, zapcore.NewCore(zapcore.NewConsoleEncoder(encoderConfig), // 编码器配置
-		zapcore.AddSync(&hook), // 打印到控制台和文件
+	cores = append(cores, zapcore.NewCore(zapcore.NewConsoleEncoder(encoderConfig), // encoder
+		zapcore.AddSync(&hook), // stdout or file
 		atomicLevel))
 	if debug {
 		cores = append(cores, zapcore.NewCore(zapcore.NewJSONEncoder(encoderConfig),

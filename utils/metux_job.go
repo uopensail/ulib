@@ -70,7 +70,7 @@ func (util *MetuxJobUtil) TryRun(job func()) {
 			if met != nil {
 				util.metux.Unlock(met)
 			}
-			//抢锁失败等一会再抢
+			// sleep 10s and try again
 			time.Sleep(time.Second * time.Duration(10))
 			continue
 		} else {

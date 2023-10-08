@@ -11,9 +11,11 @@ type EtcdConfig struct {
 	Endpoints []string `json:"endpoints" toml:"endpoints"`
 	Name      string   `json:"name" toml:"name"`
 }
+
 type RegisterDiscoveryConfig struct {
 	EtcdConfig `json:"etcd" toml:"etcd"`
 }
+
 type ServerConfig struct {
 	HttpServerConfig        `json:",inline" toml:",inline"`
 	RegisterDiscoveryConfig `json:"register" toml:"register"`

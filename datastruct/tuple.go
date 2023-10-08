@@ -1,59 +1,35 @@
 package datastruct
 
-type TupleSS struct {
-	First  string
-	Second string
+import "fmt"
+
+type Tuple[T1 int | int32 | int64 | uint64 | float32 | float64 | string,
+	T2 int | int32 | int64 | uint64 | float32 | float64 | string] struct {
+	First  T1
+	Second T2
 }
 
-type TupleSF struct {
-	First  string
-	Second float64
+type TupleList[T1 int | int32 | int64 | uint64 | float32 | float64 | string,
+	T2 int | int32 | int64 | uint64 | float32 | float64 | string] []Tuple[T1, T2]
+
+func (t TupleList[T1, T2]) Less(i, j int) bool {
+	return t[i].Second < t[j].Second
 }
 
-type TupleIF struct {
-	First  int
-	Second float64
+func (t TupleList[T1, T2]) Len() int {
+	return len(t)
 }
 
-type TupleII struct {
-	First  int
-	Second int
+func (t TupleList[T1, T2]) Swap(i, j int) {
+	t[i], t[j] = t[j], t[i]
 }
 
-type TupleSFList []TupleSF
-
-func (sort TupleSFList) Less(i, j int) bool {
-	return sort[i].Second < sort[j].Second
+func (t TupleList[T1, T2]) Print() {
+	fmt.Print("[")
+	for i := 0; i < len(t); i++ {
+		if i > 0 {
+			fmt.Print(",")
+		}
+		fmt.Print("(", t[i].First, ",", t[i].Second, ")")
+	}
+	fmt.Println(")")
 }
-func (sort TupleSFList) Len() int {
-	return len(sort)
-}
-func (sort TupleSFList) Swap(i, j int) {
-	sort[i], sort[j] = sort[j], sort[i]
-}
-
-type TupleIFList []TupleIF
-
-func (sort TupleIFList) Less(i, j int) bool {
-	return sort[i].Second < sort[j].Second
-}
-func (sort TupleIFList) Len() int {
-	return len(sort)
-}
-func (sort TupleIFList) Swap(i, j int) {
-	sort[i], sort[j] = sort[j], sort[i]
-}
-
-type TupleIFListP []*TupleIF
-
-func (sort TupleIFListP) Less(i, j int) bool {
-	return sort[i].Second < sort[j].Second
-}
-func (sort TupleIFListP) Len() int {
-	return len(sort)
-}
-func (sort TupleIFListP) Swap(i, j int) {
-	sort[i], sort[j] = sort[j], sort[i]
-}
-
-type TupleIIListP []*TupleII

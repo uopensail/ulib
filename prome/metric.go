@@ -200,7 +200,7 @@ func (mInstance *MetricsInstance) tickerCollectInfos() {
 				metricsInfos[index].P90Cost = float64(gather.items.GetP90().CostTime) / float64(time.Millisecond)
 				metricsInfos[index].P95Cost = float64(gather.items.GetP95().CostTime) / float64(time.Millisecond)
 				metricsInfos[index].P99Cost = float64(gather.items.GetP99().CostTime) / float64(time.Millisecond)
-				//计算cost bucket
+				// calculate cost bucket
 				costBucket := make(map[float64]uint64, len(leCosts))
 				cbi := 0
 				bucketSum := uint64(0)
@@ -249,7 +249,7 @@ func (mInstance *MetricsInstance) Push(mi *MetricsItem) {
 }
 func (mInstance *MetricsInstance) AddItem(mi *MetricsItem) {
 	gathers, ok := mInstance.metricsMap[mi.Name]
-	if ok == false {
+	if !ok {
 		var gs [StatusMax]*MetricsGather
 		mInstance.metricsMap[mi.Name] = gs
 		gathers = gs

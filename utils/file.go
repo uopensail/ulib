@@ -4,9 +4,9 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
+	"path"
 )
 
 const filechunk = 8192
@@ -59,17 +59,14 @@ func ListDir(dir string) ([]string, error) {
 		return nil, fmt.Errorf("dir: %s error", dir)
 	}
 
-	if dir[len(dir)-1] == '/' {
-		dir = dir[:len(dir)]
-	}
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 
 	if err != nil {
 		return nil, err
 	}
 	ret := make([]string, 0, len(files))
 	for _, f := range files {
-		ret = append(ret, dir+"/"+f.Name())
+		ret = append(ret, path.Join(dir, f.Name()))
 	}
 	return ret, nil
 }

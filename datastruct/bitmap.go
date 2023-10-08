@@ -15,6 +15,7 @@ func CreateDoubleBitMap(size int) DoubleBitMap {
 	bitmap := make(DoubleBitMap, ((size>>3)+1)<<1)
 	return bitmap
 }
+
 func (bitmap DoubleBitMap) Mark(index int, bv bool) {
 	byteIndex := index >> 2
 	offset := (index & 3) << 1

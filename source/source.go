@@ -283,7 +283,7 @@ func (s *Source) BuildIndex(name string, column string) {
 	dict := make(map[string]Collection)
 	for i := 0; i < s.Len(); i++ {
 		strs := foo(s.array[i].Get(column))
-		for j := 0; j < len(strs); i++ {
+		for j := 0; j < len(strs); j++ {
 			if list, ok := dict[strs[j]]; ok {
 				list = append(list, i)
 				dict[strs[j]] = list

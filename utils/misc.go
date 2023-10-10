@@ -68,6 +68,7 @@ type Reference struct {
 func (ref *Reference) Retain() {
 	atomic.AddInt32(&ref.referenceCount, 1)
 }
+
 func (ref *Reference) Release() {
 	atomic.AddInt32(&ref.referenceCount, -1)
 }

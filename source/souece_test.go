@@ -16,8 +16,6 @@ func TestSource(t *testing.T) {
 
 	// test get by key
 	fea := s.GetByKey("key")
-	data, _ := fea.MarshalJSON()
-	fmt.Println(string(data))
 
 	// test collection
 

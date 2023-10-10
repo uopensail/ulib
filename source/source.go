@@ -2,11 +2,13 @@ package source
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"sort"
 	"unsafe"
 
 	"github.com/bytedance/sonic"
+	"github.com/spf13/cast"
 	"github.com/uopensail/ulib/prome"
 	"github.com/uopensail/ulib/sample"
 	"github.com/uopensail/ulib/uno"
@@ -14,17 +16,44 @@ import (
 	"go.uber.org/zap"
 )
 
-type wrapper struct {
+type Collection []int
+
+type Features struct {
 	features sample.ImmutableFeatures
 	id       int
+	key      string
+}
+
+func (f *Features) Id() int {
+	return f.id
+}
+
+func (f *Features) Key() string {
+	return f.key
+}
+
+func (f *Features) Get(key string) sample.Feature {
+	return f.features.Get(key)
+}
+
+type Index struct {
+	data map[string]Collection
+}
+
+func (index *Index) Get(key interface{}) Collection {
+	if array, ok := index.data[cast.ToString(key)]; ok {
+		return array
+	}
+	return nil
 }
 
 type Source struct {
 	area        *sample.Arena
-	array       []wrapper
-	dict        map[string]*wrapper
+	array       []Features
+	dict        map[string]*Features
 	collections map[string]Collection
 	conditions  map[string]*Condition
+	indeces     map[string]*Index
 }
 
 func NewSource(filepath string, keyField string) (*Source, error) {
@@ -41,8 +70,8 @@ func NewSource(filepath string, keyField string) (*Source, error) {
 	scanner := bufio.NewScanner(file)
 	source := &Source{
 		area:  sample.NewArena(),
-		array: make([]wrapper, 0, 1024),
-		dict:  make(map[string]*wrapper),
+		array: make([]Features, 0, 1024),
+		dict:  make(map[string]*Features),
 	}
 
 	index := 0
@@ -65,51 +94,43 @@ func NewSource(filepath string, keyField string) (*Source, error) {
 			continue
 		}
 		key, _ := keyFea.GetString()
-		w := wrapper{features: *feas, id: index}
+		w := Features{features: *feas, id: index, key: key}
 		source.array = append(source.array, w)
 		source.dict[key] = &w
 		index++
 	}
+
 	if err := scanner.Err(); err != nil {
 		zlog.LOG.Error("error while scanning file", zap.Error(err))
 		stat.MarkErr()
 		return nil, err
 	}
+
 	stat.SetCounter(index)
 	source.collections = make(map[string]Collection)
 	source.conditions = make(map[string]*Condition)
+	source.indeces = make(map[string]*Index)
 	return source, nil
 }
 
-// if not found, return -1
-func (s *Source) GetId(key string) int {
-	stat := prome.NewStat("Source.GetId")
+func (s *Source) GetByKey(key string) *Features {
+	stat := prome.NewStat("Source.Get")
 	defer stat.End()
-	if w, ok := s.dict[key]; ok {
-		return w.id
-	}
-	stat.MarkMiss()
-	return -1
-}
-
-func (s *Source) GetByKey(key string) *sample.ImmutableFeatures {
-	stat := prome.NewStat("Source.GetByKey")
-	defer stat.End()
-	if w, ok := s.dict[key]; ok {
-		return &w.features
+	if f, ok := s.dict[key]; ok {
+		return f
 	}
 	stat.MarkMiss()
 	return nil
 }
 
-func (s *Source) GetById(id int) *sample.ImmutableFeatures {
+func (s *Source) GetById(id int) *Features {
 	stat := prome.NewStat("Source.GetById")
 	defer stat.End()
 	if id < 0 || id >= len(s.array) {
 		stat.MarkMiss()
 		return nil
 	}
-	return &s.array[id].features
+	return &s.array[id]
 }
 
 func (s *Source) Len() int {
@@ -185,7 +206,7 @@ func (s *Source) GetCondition(name string) *Condition {
 	return nil
 }
 
-func (s *Source) Sort(collection Collection, key string, desc bool) []int {
+func (s *Source) Sort(collection Collection, key string, desc bool) Collection {
 	stat := prome.NewStat("Source.Sort")
 	defer stat.End()
 	if len(key) == 0 {
@@ -193,24 +214,88 @@ func (s *Source) Sort(collection Collection, key string, desc bool) []int {
 		zlog.LOG.Error("sort key is nil")
 		return collection
 	}
-	slice := make([]*wrapper, len(collection))
-	for i := 0; i < len(collection); i++ {
-		slice[i] = &s.array[collection[i]]
+
+	ret := make(Collection, len(collection))
+	copy(ret, collection)
+	sort.Slice(ret, func(i, j int) bool {
+		return less(&s.array[i].features, &s.array[j].features, key, desc)
+	})
+
+	return ret
+}
+
+func (s *Source) GetIndex(name string) *Index {
+	stat := prome.NewStat("Source.GetIndex")
+	defer stat.End()
+	if index, ok := s.indeces[name]; ok {
+		return index
 	}
-	w := &wrappers{
-		slice: slice,
-		key:   key,
-		desc:  desc,
-	}
-	if len(key) > 0 {
-		sort.Stable(w)
+	stat.MarkMiss()
+	return nil
+}
+
+func (s *Source) BuildIndex(name string, column string) {
+	stat := prome.NewStat("Source.BuildIndex")
+	defer stat.End()
+
+	// generate func map
+	funcs := make(map[sample.DataType]func(feature sample.Feature) []string)
+
+	funcs[sample.Float32Type] = func(feature sample.Feature) []string {
+		val, _ := feature.GetFloat32()
+		return []string{cast.ToString(val)}
 	}
 
-	for i := 0; i < w.Len(); i++ {
-		collection[i] = w.slice[i].id
+	funcs[sample.Float32sType] = func(feature sample.Feature) []string {
+		vals, _ := feature.GetFloat32s()
+		ret := make([]string, len(vals))
+		for i := 0; i < len(vals); i++ {
+			ret[i] = cast.ToString(vals[i])
+		}
+		return ret
 	}
 
-	return collection
+	funcs[sample.Int64Type] = func(feature sample.Feature) []string {
+		val, _ := feature.GetInt64()
+		return []string{cast.ToString(val)}
+	}
+
+	funcs[sample.Int64sType] = func(feature sample.Feature) []string {
+		vals, _ := feature.GetInt64s()
+		ret := make([]string, len(vals))
+		for i := 0; i < len(vals); i++ {
+			ret[i] = cast.ToString(vals[i])
+		}
+		return ret
+	}
+
+	funcs[sample.StringType] = func(feature sample.Feature) []string {
+		val, _ := feature.GetString()
+		return []string{val}
+	}
+
+	funcs[sample.StringsType] = func(feature sample.Feature) []string {
+		vals, _ := feature.GetStrings()
+		return vals
+	}
+
+	foo := funcs[s.array[0].Get(column).Type()]
+	dict := make(map[string]Collection)
+	for i := 0; i < s.Len(); i++ {
+		strs := foo(s.array[i].Get(column))
+		for j := 0; j < len(strs); i++ {
+			if list, ok := dict[strs[j]]; ok {
+				list = append(list, i)
+				dict[strs[j]] = list
+			} else {
+				dict[strs[j]] = []int{i}
+			}
+		}
+	}
+
+	s.indeces[name] = &Index{
+		data: dict,
+	}
 }
 
 func (s *Source) Release() {
@@ -219,4 +304,41 @@ func (s *Source) Release() {
 	for _, condition := range s.conditions {
 		condition.Release()
 	}
+}
+
+func less(feasA, feasB sample.Features, key string, desc bool) bool {
+	left := feasA.Get(key)
+	right := feasB.Get(key)
+
+	if left == nil || right == nil {
+		return false
+	}
+
+	dtype := left.Type()
+	switch dtype {
+	case sample.Float32Type:
+		lv, err1 := left.GetFloat32()
+		rv, err2 := right.GetFloat32()
+		if err1 != nil || err2 != nil {
+			return false
+		}
+		return !((lv < rv) && desc)
+	case sample.Int64Type:
+		lv, err1 := left.GetInt64()
+		rv, err2 := right.GetInt64()
+		if err1 != nil || err2 != nil {
+			return false
+		}
+		return !((lv < rv) && desc)
+	case sample.StringType:
+		lv, err1 := left.GetString()
+		rv, err2 := right.GetString()
+		if err1 != nil || err2 != nil {
+			return false
+		}
+		return !((lv < rv) && desc)
+	default:
+		panic(fmt.Sprintf("data type: %d not support", dtype))
+	}
+
 }

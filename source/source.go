@@ -2,13 +2,13 @@ package source
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"sort"
 	"unsafe"
 
 	"github.com/bytedance/sonic"
 	"github.com/spf13/cast"
+	"github.com/uopensail/ulib/datastruct"
 	"github.com/uopensail/ulib/prome"
 	"github.com/uopensail/ulib/sample"
 	"github.com/uopensail/ulib/uno"
@@ -50,6 +50,7 @@ func (index *Index) Get(key interface{}) Collection {
 type Source struct {
 	area        *sample.Arena
 	array       []Features
+	ids         []datastruct.Tuple[string, float32]
 	dict        map[string]*Features
 	collections map[string]Collection
 	conditions  map[string]*Condition
@@ -72,6 +73,7 @@ func NewSource(filepath string, keyField string) (*Source, error) {
 		area:  sample.NewArena(),
 		array: make([]Features, 0, 1024),
 		dict:  make(map[string]*Features),
+		ids:   make([]datastruct.Tuple[string, float32], 0, 1024),
 	}
 
 	index := 0
@@ -96,6 +98,7 @@ func NewSource(filepath string, keyField string) (*Source, error) {
 		key, _ := keyFea.GetString()
 		w := Features{features: *feas, id: index, key: key}
 		source.array = append(source.array, w)
+		source.ids = append(source.ids, datastruct.Tuple[string, float32]{First: key, Second: 0.0})
 		source.dict[key] = &w
 		index++
 	}
@@ -114,7 +117,7 @@ func NewSource(filepath string, keyField string) (*Source, error) {
 }
 
 func (s *Source) GetByKey(key string) *Features {
-	stat := prome.NewStat("Source.Get")
+	stat := prome.NewStat("Source.GetByKey")
 	defer stat.End()
 	if f, ok := s.dict[key]; ok {
 		return f
@@ -135,6 +138,10 @@ func (s *Source) GetById(id int) *Features {
 
 func (s *Source) Len() int {
 	return len(s.array)
+}
+
+func (s *Source) List() []datastruct.Tuple[string, float32] {
+	return s.ids
 }
 
 func (s *Source) BuildCollection(name string, condition string) {
@@ -206,22 +213,53 @@ func (s *Source) GetCondition(name string) *Condition {
 	return nil
 }
 
-func (s *Source) Sort(collection Collection, key string, desc bool) Collection {
+func (s *Source) Sort(collection Collection, key string, desc bool) {
 	stat := prome.NewStat("Source.Sort")
 	defer stat.End()
 	if len(key) == 0 {
 		stat.MarkErr()
 		zlog.LOG.Error("sort key is nil")
-		return collection
+		return
 	}
 
-	ret := make(Collection, len(collection))
-	copy(ret, collection)
-	sort.Slice(ret, func(i, j int) bool {
-		return less(&s.array[i].features, &s.array[j].features, key, desc)
-	})
+	less := func(i, j int) bool {
+		left := s.array[i].Get(key)
+		right := s.array[j].Get(key)
 
-	return ret
+		if left == nil || right == nil {
+			return false
+		}
+
+		dtype := left.Type()
+		switch dtype {
+		case sample.Float32Type:
+			lv, err1 := left.GetFloat32()
+			rv, err2 := right.GetFloat32()
+			if err1 != nil || err2 != nil {
+				return false
+			}
+			return !((lv < rv) && desc)
+		case sample.Int64Type:
+			lv, err1 := left.GetInt64()
+			rv, err2 := right.GetInt64()
+			if err1 != nil || err2 != nil {
+				return false
+			}
+			return !((lv < rv) && desc)
+		case sample.StringType:
+			lv, err1 := left.GetString()
+			rv, err2 := right.GetString()
+			if err1 != nil || err2 != nil {
+				return false
+			}
+			return !((lv < rv) && desc)
+		default:
+			return false
+		}
+	}
+	sort.Slice(collection, func(i, j int) bool {
+		return less(i, j)
+	})
 }
 
 func (s *Source) GetIndex(name string) *Index {
@@ -304,41 +342,4 @@ func (s *Source) Release() {
 	for _, condition := range s.conditions {
 		condition.Release()
 	}
-}
-
-func less(feasA, feasB sample.Features, key string, desc bool) bool {
-	left := feasA.Get(key)
-	right := feasB.Get(key)
-
-	if left == nil || right == nil {
-		return false
-	}
-
-	dtype := left.Type()
-	switch dtype {
-	case sample.Float32Type:
-		lv, err1 := left.GetFloat32()
-		rv, err2 := right.GetFloat32()
-		if err1 != nil || err2 != nil {
-			return false
-		}
-		return !((lv < rv) && desc)
-	case sample.Int64Type:
-		lv, err1 := left.GetInt64()
-		rv, err2 := right.GetInt64()
-		if err1 != nil || err2 != nil {
-			return false
-		}
-		return !((lv < rv) && desc)
-	case sample.StringType:
-		lv, err1 := left.GetString()
-		rv, err2 := right.GetString()
-		if err1 != nil || err2 != nil {
-			return false
-		}
-		return !((lv < rv) && desc)
-	default:
-		panic(fmt.Sprintf("data type: %d not support", dtype))
-	}
-
 }

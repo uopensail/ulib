@@ -1,19 +1,16 @@
 package datastruct
 
 import (
-	"math/rand"
-	"sort"
+	"encoding/json"
+	"fmt"
 	"testing"
-	"time"
 )
 
-func TestTuple(t *testing.T) {
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	list := make(TupleList[int, int], 0, 10)
-	for i := 0; i < 10; i++ {
-		list = append(list, Tuple[int, int]{r.Int(), r.Int()})
-	}
-	list.Print()
-	sort.Sort(list)
-	list.Print()
+func TestTupleMarshal(t *testing.T) {
+	v := Tuple[string, int]{First: "string", Second: 1}
+	data, _ := json.Marshal(v)
+	fmt.Println(string(data))
+	var v1 Tuple[string, int]
+	json.Unmarshal(data, &v1)
+	v1.Print()
 }

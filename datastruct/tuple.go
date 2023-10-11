@@ -1,35 +1,50 @@
 package datastruct
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+	"unsafe"
+)
 
-type Tuple[T1 int | int32 | int64 | uint64 | float32 | float64 | string,
-	T2 int | int32 | int64 | uint64 | float32 | float64 | string] struct {
+type Tuple[T1 any, T2 any] struct {
 	First  T1
 	Second T2
 }
 
-type TupleList[T1 int | int32 | int64 | uint64 | float32 | float64 | string,
-	T2 int | int32 | int64 | uint64 | float32 | float64 | string] []Tuple[T1, T2]
-
-func (t TupleList[T1, T2]) Less(i, j int) bool {
-	return t[i].Second < t[j].Second
+func (t *Tuple[T1, T2]) MarshalJSON() ([]byte, error) {
+	return json.Marshal((*(struct {
+		First  T1 `json:"first"`
+		Second T2 `json:"second"`
+	}))(unsafe.Pointer(t)))
 }
 
-func (t TupleList[T1, T2]) Len() int {
-	return len(t)
+func (t *Tuple[T1, T2]) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, (*(struct {
+		First  T1 `json:"first"`
+		Second T2 `json:"second"`
+	}))(unsafe.Pointer(t)))
 }
 
-func (t TupleList[T1, T2]) Swap(i, j int) {
-	t[i], t[j] = t[j], t[i]
+func (t *Tuple[T1, T2]) Print() {
+	fmt.Printf("(%v,%v)\n", t.First, t.Second)
 }
 
-func (t TupleList[T1, T2]) Print() {
-	fmt.Print("[")
-	for i := 0; i < len(t); i++ {
-		if i > 0 {
-			fmt.Print(",")
-		}
-		fmt.Print("(", t[i].First, ",", t[i].Second, ")")
-	}
-	fmt.Println(")")
+type Ordered interface {
+	Integer | Float | ~string
+}
+
+type Integer interface {
+	Signed | Unsigned
+}
+
+type Signed interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64
+}
+
+type Unsigned interface {
+	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
+}
+
+type Float interface {
+	~float32 | ~float64
 }

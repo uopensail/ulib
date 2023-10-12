@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"unsafe"
 
 	"github.com/bytedance/sonic"
@@ -382,9 +383,9 @@ func deepcpyOfStrings(arr []string) []string {
 }
 
 func deepcopyOfString(s string) (str string) {
-	data := make([]byte, len(s))
-	copy(data, *(*[]byte)(unsafe.Pointer(&s)))
-	return string(data)
+	var builder strings.Builder
+	builder.WriteString(s)
+	return builder.String()
 }
 
 func uintptr2Pointer(addr uintptr) unsafe.Pointer {

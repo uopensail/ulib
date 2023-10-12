@@ -23,15 +23,16 @@ func (c *Condition) Check(features sample.Features, collection Collection) Colle
 	slices := make([][]unsafe.Pointer, 0, len(collection))
 	slice = c.evaluator.Allocate()
 	c.evaluator.Fill(features, slice)
+	address := make([]uintptr, len(slice))
+	for i := 0; i < len(slice); i++ {
+		address[i] = uintptr(slice[i])
+	}
 
 	for i := 0; i < len(collection); i++ {
 		oldSlice = c.slices[collection[i]]
 		newSlice = make([]unsafe.Pointer, len(oldSlice))
-		copy(newSlice, oldSlice)
 		for j := 0; j < len(slice); j++ {
-			if slice[j] != nil {
-				newSlice[j] = slice[j]
-			}
+			newSlice[j] = unsafe.Pointer(uintptr(oldSlice[j]) | address[j])
 		}
 		slices = append(slices, newSlice)
 	}
@@ -55,15 +56,16 @@ func (c *Condition) CheckAll(features sample.Features) Collection {
 
 	slices := make([][]unsafe.Pointer, 0, len(c.slices))
 	slice = c.evaluator.Allocate()
+	address := make([]uintptr, len(slice))
+	for i := 0; i < len(slice); i++ {
+		address[i] = uintptr(slice[i])
+	}
 	c.evaluator.Fill(features, slice)
 
 	for i := 0; i < len(c.slices); i++ {
 		newSlice = make([]unsafe.Pointer, len(c.slices[i]))
-		copy(newSlice, c.slices[i])
 		for j := 0; j < len(slice); j++ {
-			if slice[j] != nil {
-				newSlice[j] = slice[j]
-			}
+			newSlice[j] = unsafe.Pointer(uintptr(c.slices[i][j]) | address[j])
 		}
 		slices = append(slices, newSlice)
 	}

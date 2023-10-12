@@ -69,13 +69,3 @@ type GRPCClientConfig struct {
 	MaxConn        int    `json:"max_conn" toml:"max_conn"`
 	HealthCheck    bool   `json:"health_check" toml:"health_check"`
 }
-
-type ZkRegConfig struct {
-	Hosts  []string `toml:"hosts"`
-	Prefix string   `toml:"prefix"`
-}
-
-type PanguConfig struct {
-	ZKHosts     []string `toml:"zkhosts"`
-	ServiceName string   `toml:"service_name"`
-}

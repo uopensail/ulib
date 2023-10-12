@@ -62,5 +62,3 @@ func GetStringParam(param map[string]string, key string, defaultVal string) stri
 	}
 	return defaultVal
 }
-
-

@@ -8,6 +8,7 @@ package uno
 import "C"
 
 import (
+	"strings"
 	"unsafe"
 )
 
@@ -62,9 +63,12 @@ func call_for_float32(function string, args []unsafe.Pointer) float32 {
 func call_for_string(function string, args []unsafe.Pointer) string {
 	call(function, args)
 	s := *(*string)(args[len(args)-1])
-	data := make([]byte, len(s))
-	copy(data, *(*[]byte)(unsafe.Pointer(&s)))
+
+	// deep copy
+	var builder strings.Builder
+	builder.WriteString(s)
+	ret := builder.String()
 	C.free(args[len(args)-1])
 	args[len(args)-1] = nil
-	return string(data)
+	return ret
 }

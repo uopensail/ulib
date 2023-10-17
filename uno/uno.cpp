@@ -87,12 +87,16 @@ void uno_batch_eval(void *expression, char *slices, char *result) {
     ptr = &(*array)[i];
     // copy for safety
     VarSlice var(*ptr);
-    status = (*expr)(&var);
-    (*ret)[i] = status;
-    for (size_t i = 0; i < var.size(); i++) {
-      if ((*ptr)[i] == nullptr && var[i] != nullptr) {
-        free(var[i]);
-      }
+    if (var.size() == 0) {
+      (*ret)[i] = -1;
+    } else {
+        status = (*expr)(&var);
+        (*ret)[i] = status;
+        for (size_t i = 0; i < var.size(); i++) {
+          if ((*ptr)[i] == nullptr && var[i] != nullptr) {
+            free(var[i]);
+          }
+        }
     }
   }
 }

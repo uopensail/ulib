@@ -14,7 +14,7 @@ func TestEval(t *testing.T) {
 	}
 	slice := instance.Allocate()
 	fmt.Printf("%v\n", slice)
-	err = instance.FillFloat32("v", float32(1001), slice)
+	err = instance.FillFloat32("", "v", float32(1001), slice)
 	fmt.Printf("%v\n", err)
 
 	fmt.Printf("%v\n", slice)

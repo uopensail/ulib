@@ -1,4 +1,4 @@
-package items
+package pool
 
 import (
 	"bufio"
@@ -30,7 +30,7 @@ func (f *Features) Get(key string) sample.Feature {
 	return f.Feats.Get(key)
 }
 
-type ItemPool struct {
+type Pool struct {
 	area            *sample.Arena
 	Array           []Features
 	ids             []datastruct.Tuple[string, float32]
@@ -38,8 +38,8 @@ type ItemPool struct {
 	dict            map[string]*Features
 }
 
-func NewItemPool(filepath string, keyField string) (*ItemPool, error) {
-	stat := prome.NewStat("NewItemPool")
+func NewPool(filepath string, keyField string) (*Pool, error) {
+	stat := prome.NewStat("NewPool")
 	defer stat.End()
 	file, err := os.Open(filepath)
 	if err != nil {
@@ -50,7 +50,7 @@ func NewItemPool(filepath string, keyField string) (*ItemPool, error) {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	pool := &ItemPool{
+	pool := &Pool{
 		area:  sample.NewArena(),
 		Array: make([]Features, 0, 1024),
 		dict:  make(map[string]*Features),
@@ -96,7 +96,7 @@ func NewItemPool(filepath string, keyField string) (*ItemPool, error) {
 	return pool, nil
 }
 
-func (s *ItemPool) GetByKey(key string) *Features {
+func (s *Pool) GetByKey(key string) *Features {
 	stat := prome.NewStat("pool.GetByKey")
 	defer stat.End()
 	if f, ok := s.dict[key]; ok {
@@ -106,7 +106,7 @@ func (s *ItemPool) GetByKey(key string) *Features {
 	return nil
 }
 
-func (s *ItemPool) GetById(id int) *Features {
+func (s *Pool) GetById(id int) *Features {
 	stat := prome.NewStat("pool.GetById")
 	defer stat.End()
 	if id < 0 || id >= len(s.Array) {
@@ -116,10 +116,10 @@ func (s *ItemPool) GetById(id int) *Features {
 	return &s.Array[id]
 }
 
-func (s *ItemPool) Len() int {
+func (s *Pool) Len() int {
 	return len(s.Array)
 }
 
-func (s *ItemPool) List() []datastruct.Tuple[string, float32] {
+func (s *Pool) List() []datastruct.Tuple[string, float32] {
 	return s.ids
 }

@@ -220,7 +220,7 @@ func (s *Listener) ExitColumnArithmeticExpression(ctx *ColumnArithmeticExpressio
 	} else if mark == "[strings]" {
 		dtype = sample.StringsType
 	}
-	tmp := &Variable{value: column, dtype: dtype}
+	tmp := &Variable{value: fmt.Sprintf(".%s", column), dtype: dtype}
 	s.arithmetics.Push(tmp)
 }
 

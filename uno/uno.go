@@ -3,10 +3,13 @@ package uno
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"unsafe"
 
 	"github.com/antlr4-go/antlr/v4"
 	"github.com/uopensail/ulib/sample"
+	"github.com/uopensail/ulib/zlog"
+	"go.uber.org/zap"
 )
 
 type _Column struct {
@@ -28,7 +31,7 @@ type _Expression struct {
 
 type Evaluator struct {
 	expression unsafe.Pointer
-	columns    map[string]_Column
+	columns    map[string]map[string]_Column
 }
 
 func NewEvaluator(condition string) (*Evaluator, error) {
@@ -42,27 +45,39 @@ func NewEvaluator(condition string) (*Evaluator, error) {
 	}
 
 	expr := uno_create_expression(code)
-	columns := make(map[string]_Column)
+	columns := make(map[string]map[string]_Column)
 	cols := (*_Expression)(expr).columns
 	for i := 0; i < len(cols.addrs); i++ {
-		columns[cols.cols[i]] = _Column{
+		items := strings.Split(cols.cols[i], ".")
+		tmp, ok := columns[items[0]]
+		if !ok {
+			tmp = make(map[string]_Column)
+		}
+		tmp[items[1]] = _Column{
 			Addr:   cols.addrs[i],
 			Column: cols.cols[i],
 			Type:   cols.types[i],
 		}
+		columns[items[0]] = tmp
 	}
 	return &Evaluator{expression: expr, columns: columns}, nil
 }
 
-func (e *Evaluator) Fill(features sample.Features, value []unsafe.Pointer) {
-	for name, column := range e.columns {
+func (e *Evaluator) Fill(table string, features sample.Features, value []unsafe.Pointer) {
+	columns, ok := e.columns[table]
+	if !ok {
+		zlog.LOG.Error("table not exists", zap.String("table", table))
+		return
+	}
+	for name, column := range columns {
 		fea := features.Get(name)
 		if fea == nil {
 			continue
 		}
 
 		if fea.Type() != column.Type {
-			panic("column type mismatch")
+			zlog.LOG.Error("column type mismatch")
+			continue
 		}
 		if column.Type == sample.Int64Type {
 			data, _ := fea.GetInt64()
@@ -86,8 +101,13 @@ func (e *Evaluator) Fill(features sample.Features, value []unsafe.Pointer) {
 	}
 }
 
-func (e *Evaluator) FillInt64(col string, data int64, value []unsafe.Pointer) error {
-	column, ok := e.columns[col]
+func (e *Evaluator) FillInt64(table, col string, data int64, value []unsafe.Pointer) error {
+	columns, ok := e.columns[table]
+	if !ok {
+		return fmt.Errorf("table %s not found", table)
+	}
+
+	column, ok := columns[col]
 	if !ok {
 		return fmt.Errorf("column %s not found", col)
 	}
@@ -99,8 +119,12 @@ func (e *Evaluator) FillInt64(col string, data int64, value []unsafe.Pointer) er
 	return fmt.Errorf("column type check error: %d not found", column.Type)
 }
 
-func (e *Evaluator) FillInt64s(col string, data []int64, value []unsafe.Pointer) error {
-	column, ok := e.columns[col]
+func (e *Evaluator) FillInt64s(table, col string, data []int64, value []unsafe.Pointer) error {
+	columns, ok := e.columns[table]
+	if !ok {
+		return fmt.Errorf("table %s not found", table)
+	}
+	column, ok := columns[col]
 	if !ok {
 		return fmt.Errorf("column %s not found", col)
 	}
@@ -112,8 +136,12 @@ func (e *Evaluator) FillInt64s(col string, data []int64, value []unsafe.Pointer)
 	return fmt.Errorf("column type check error: %d not found", column.Type)
 }
 
-func (e *Evaluator) FillFloat32(col string, data float32, value []unsafe.Pointer) error {
-	column, ok := e.columns[col]
+func (e *Evaluator) FillFloat32(table, col string, data float32, value []unsafe.Pointer) error {
+	columns, ok := e.columns[table]
+	if !ok {
+		return fmt.Errorf("table %s not found", table)
+	}
+	column, ok := columns[col]
 	if !ok {
 		return fmt.Errorf("column %s not found", col)
 	}
@@ -125,8 +153,12 @@ func (e *Evaluator) FillFloat32(col string, data float32, value []unsafe.Pointer
 	return fmt.Errorf("column type check error: %d not found", column.Type)
 }
 
-func (e *Evaluator) FillFloat32s(col string, data []float32, value []unsafe.Pointer) error {
-	column, ok := e.columns[col]
+func (e *Evaluator) FillFloat32s(table, col string, data []float32, value []unsafe.Pointer) error {
+	columns, ok := e.columns[table]
+	if !ok {
+		return fmt.Errorf("table %s not found", table)
+	}
+	column, ok := columns[col]
 	if !ok {
 		return fmt.Errorf("column %s not found", col)
 	}
@@ -138,8 +170,12 @@ func (e *Evaluator) FillFloat32s(col string, data []float32, value []unsafe.Poin
 	return fmt.Errorf("column type check error: %d not found", column.Type)
 }
 
-func (e *Evaluator) FillString(col string, data string, value []unsafe.Pointer) error {
-	column, ok := e.columns[col]
+func (e *Evaluator) FillString(table, col string, data string, value []unsafe.Pointer) error {
+	columns, ok := e.columns[table]
+	if !ok {
+		return fmt.Errorf("table %s not found", table)
+	}
+	column, ok := columns[col]
 	if !ok {
 		return fmt.Errorf("column %s not found", col)
 	}
@@ -151,8 +187,12 @@ func (e *Evaluator) FillString(col string, data string, value []unsafe.Pointer) 
 	return fmt.Errorf("column type check error: %d not found", column.Type)
 }
 
-func (e *Evaluator) FillStrings(col string, data []string, value []unsafe.Pointer) error {
-	column, ok := e.columns[col]
+func (e *Evaluator) FillStrings(table, col string, data []string, value []unsafe.Pointer) error {
+	columns, ok := e.columns[table]
+	if !ok {
+		return fmt.Errorf("table %s not found", table)
+	}
+	column, ok := columns[col]
 	if !ok {
 		return fmt.Errorf("column %s not found", col)
 	}

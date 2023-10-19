@@ -59,3 +59,9 @@ func (bitmap BitMap) Clear() {
 		}
 	}
 }
+
+func (bitmap BitMap) And(b BitMap) {
+	for i := 0; i < len(b) && i < len(bitmap); i++ {
+		bitmap[i] &= b[i]
+	}
+}

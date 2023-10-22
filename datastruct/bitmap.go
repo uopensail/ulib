@@ -50,3 +50,18 @@ func (bitmap BitMap) Check(index int) bool {
 	offset := index & 7
 	return !(bitmap[byteIndex]&(1<<offset) == 0)
 }
+
+func (bitmap BitMap) Clear() {
+	if len(bitmap) > 0 {
+		bitmap[0] = 0
+		for bp := 1; bp < len(bitmap); bp *= 2 {
+			copy(bitmap[bp:], bitmap[:bp])
+		}
+	}
+}
+
+func (bitmap BitMap) And(b BitMap) {
+	for i := 0; i < len(b) && i < len(bitmap); i++ {
+		bitmap[i] &= b[i]
+	}
+}

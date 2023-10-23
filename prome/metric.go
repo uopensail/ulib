@@ -185,7 +185,7 @@ func (mInstance *MetricsInstance) tickerCollectInfos() {
 	metricsInfos := make([]MetricsInfo, len(mInstance.metricsMap)*int(StatusMax))
 	index := 0
 	now := time.Now().UnixNano()
-	collectInterval := float32((now - mInstance.lastCollectTime) / int64(time.Second))
+	collectInterval := float32((now - mInstance.lastTickerTime) / int64(time.Second))
 	for k, v := range mInstance.metricsMap {
 		for j := int8(0); j < StatusMax; j++ {
 			gather := v[j]

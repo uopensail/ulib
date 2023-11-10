@@ -398,17 +398,20 @@ func (f *Function) GetValue() unsafe.Pointer {
 
 func (f *Function) MarshalJSON() ([]byte, error) {
 	type jsonNode struct {
-		Id    int32                  `json:"id"`
-		Ntype NodeType               `json:"ntype"`
-		Func  string                 `json:"func"`
-		Args  []ArithmeticExpression `json:"args"`
+		ID    int32    `json:"id"`
+		Ntype NodeType `json:"ntype"`
+		Func  string   `json:"func"`
+		Args  []int    `json:"args"`
 	}
 
 	node := &jsonNode{
-		Id:    f.id,
+		ID:    f.id,
 		Ntype: f.GetType(),
 		Func:  f.function,
-		Args:  f.args,
+		Args:  make([]int, len(f.args)),
+	}
+	for i := 0; i < len(f.args); i++ {
+		node.Args[i] = int(f.args[i].GetId())
 	}
 	return json.Marshal(node)
 }

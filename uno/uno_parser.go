@@ -32,12 +32,15 @@ var unoParserStaticData struct {
 func unoParserInit() {
 	staticData := &unoParserStaticData
 	staticData.literalNames = []string{
-		"", "'('", "')'", "','", "'.'", "'['", "']'", "'+'", "'-'", "'*'", "'/'",
-		"'%'", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "'='",
-		"'=='", "'<>'", "'!='", "'>'", "'>='", "'<'", "'<='",
+		"", "'('", "')'", "'['", "']'", "'.'", "','", "'\"'", "'+'", "'-'",
+		"'*'", "'/'", "'%'", "'int64'", "'int64s'", "'float32'", "'float32s'",
+		"'string'", "'strings'", "'ON'", "'and'", "'or'", "'not'", "'in'", "'true'",
+		"'false'", "", "'='", "'=='", "'<>'", "'!='", "'>'", "'>='", "'<'",
+		"'<='",
 	}
 	staticData.symbolicNames = []string{
-		"", "", "", "", "", "", "", "T_ADD", "T_SUB", "T_MUL", "T_DIV", "T_MOD",
+		"", "BRACKET_OPEN", "BRACKET_CLOSE", "SQUARE_OPEN", "SQUARE_CLOSE",
+		"DOT", "COMMA", "QUOTA", "T_ADD", "T_SUB", "T_MUL", "T_DIV", "T_MOD",
 		"T_INT", "T_INTS", "T_FLOAT", "T_FLOATS", "T_STRING", "T_STRINGS", "T_ON",
 		"T_AND", "T_OR", "T_NOT", "T_IN", "T_TRUE", "T_FALSE", "T_COMPARE",
 		"T_EQUAL", "T_EQUAL2", "T_NOTEQUAL", "T_NOTEQUAL2", "T_GREATER", "T_GREATEREQUAL",
@@ -49,7 +52,7 @@ func unoParserInit() {
 	}
 	staticData.predictionContextCache = antlr.NewPredictionContextCache()
 	staticData.serializedATN = []int32{
-		4, 1, 41, 102, 2, 0, 7, 0, 2, 1, 7, 1, 2, 2, 7, 2, 2, 3, 7, 3, 1, 0, 1,
+		4, 1, 42, 102, 2, 0, 7, 0, 2, 1, 7, 1, 2, 2, 7, 2, 2, 3, 7, 3, 1, 0, 1,
 		0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3,
 		1, 34, 8, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 1, 42, 8, 1, 10, 1,
@@ -58,41 +61,41 @@ func unoParserInit() {
 		2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 3, 2, 76, 8, 2,
 		1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2,
 		1, 2, 1, 2, 1, 2, 5, 2, 93, 8, 2, 10, 2, 12, 2, 96, 9, 2, 1, 3, 1, 3, 1,
-		3, 1, 3, 1, 3, 0, 2, 2, 4, 4, 0, 2, 4, 6, 0, 2, 3, 0, 35, 35, 37, 37, 39,
-		39, 1, 0, 12, 17, 118, 0, 8, 1, 0, 0, 0, 2, 33, 1, 0, 0, 0, 4, 75, 1, 0,
+		3, 1, 3, 1, 3, 0, 2, 2, 4, 4, 0, 2, 4, 6, 0, 2, 3, 0, 36, 36, 38, 38, 40,
+		40, 1, 0, 13, 18, 118, 0, 8, 1, 0, 0, 0, 2, 33, 1, 0, 0, 0, 4, 75, 1, 0,
 		0, 0, 6, 97, 1, 0, 0, 0, 8, 9, 3, 2, 1, 0, 9, 10, 5, 0, 0, 1, 10, 1, 1,
-		0, 0, 0, 11, 12, 6, 1, -1, 0, 12, 13, 3, 4, 2, 0, 13, 14, 5, 25, 0, 0,
-		14, 15, 3, 4, 2, 0, 15, 34, 1, 0, 0, 0, 16, 17, 5, 21, 0, 0, 17, 34, 3,
-		2, 1, 6, 18, 19, 3, 4, 2, 0, 19, 20, 5, 22, 0, 0, 20, 21, 7, 0, 0, 0, 21,
-		34, 1, 0, 0, 0, 22, 23, 3, 4, 2, 0, 23, 24, 5, 21, 0, 0, 24, 25, 5, 22,
+		0, 0, 0, 11, 12, 6, 1, -1, 0, 12, 13, 3, 4, 2, 0, 13, 14, 5, 26, 0, 0,
+		14, 15, 3, 4, 2, 0, 15, 34, 1, 0, 0, 0, 16, 17, 5, 22, 0, 0, 17, 34, 3,
+		2, 1, 6, 18, 19, 3, 4, 2, 0, 19, 20, 5, 23, 0, 0, 20, 21, 7, 0, 0, 0, 21,
+		34, 1, 0, 0, 0, 22, 23, 3, 4, 2, 0, 23, 24, 5, 22, 0, 0, 24, 25, 5, 23,
 		0, 0, 25, 26, 7, 0, 0, 0, 26, 34, 1, 0, 0, 0, 27, 28, 5, 1, 0, 0, 28, 29,
-		3, 2, 1, 0, 29, 30, 5, 2, 0, 0, 30, 34, 1, 0, 0, 0, 31, 34, 5, 23, 0, 0,
-		32, 34, 5, 24, 0, 0, 33, 11, 1, 0, 0, 0, 33, 16, 1, 0, 0, 0, 33, 18, 1,
+		3, 2, 1, 0, 29, 30, 5, 2, 0, 0, 30, 34, 1, 0, 0, 0, 31, 34, 5, 24, 0, 0,
+		32, 34, 5, 25, 0, 0, 33, 11, 1, 0, 0, 0, 33, 16, 1, 0, 0, 0, 33, 18, 1,
 		0, 0, 0, 33, 22, 1, 0, 0, 0, 33, 27, 1, 0, 0, 0, 33, 31, 1, 0, 0, 0, 33,
-		32, 1, 0, 0, 0, 34, 43, 1, 0, 0, 0, 35, 36, 10, 9, 0, 0, 36, 37, 5, 19,
-		0, 0, 37, 42, 3, 2, 1, 10, 38, 39, 10, 8, 0, 0, 39, 40, 5, 20, 0, 0, 40,
+		32, 1, 0, 0, 0, 34, 43, 1, 0, 0, 0, 35, 36, 10, 9, 0, 0, 36, 37, 5, 20,
+		0, 0, 37, 42, 3, 2, 1, 10, 38, 39, 10, 8, 0, 0, 39, 40, 5, 21, 0, 0, 40,
 		42, 3, 2, 1, 9, 41, 35, 1, 0, 0, 0, 41, 38, 1, 0, 0, 0, 42, 45, 1, 0, 0,
 		0, 43, 41, 1, 0, 0, 0, 43, 44, 1, 0, 0, 0, 44, 3, 1, 0, 0, 0, 45, 43, 1,
-		0, 0, 0, 46, 47, 6, 2, -1, 0, 47, 48, 5, 34, 0, 0, 48, 49, 5, 1, 0, 0,
-		49, 76, 5, 2, 0, 0, 50, 51, 5, 34, 0, 0, 51, 52, 5, 1, 0, 0, 52, 57, 3,
-		4, 2, 0, 53, 54, 5, 3, 0, 0, 54, 56, 3, 4, 2, 0, 55, 53, 1, 0, 0, 0, 56,
+		0, 0, 0, 46, 47, 6, 2, -1, 0, 47, 48, 5, 35, 0, 0, 48, 49, 5, 1, 0, 0,
+		49, 76, 5, 2, 0, 0, 50, 51, 5, 35, 0, 0, 51, 52, 5, 1, 0, 0, 52, 57, 3,
+		4, 2, 0, 53, 54, 5, 6, 0, 0, 54, 56, 3, 4, 2, 0, 55, 53, 1, 0, 0, 0, 56,
 		59, 1, 0, 0, 0, 57, 55, 1, 0, 0, 0, 57, 58, 1, 0, 0, 0, 58, 60, 1, 0, 0,
 		0, 59, 57, 1, 0, 0, 0, 60, 61, 5, 2, 0, 0, 61, 76, 1, 0, 0, 0, 62, 63,
-		5, 34, 0, 0, 63, 76, 3, 6, 3, 0, 64, 65, 5, 34, 0, 0, 65, 66, 5, 4, 0,
-		0, 66, 67, 5, 34, 0, 0, 67, 76, 3, 6, 3, 0, 68, 76, 5, 40, 0, 0, 69, 76,
-		5, 36, 0, 0, 70, 76, 5, 38, 0, 0, 71, 72, 5, 1, 0, 0, 72, 73, 3, 4, 2,
+		5, 35, 0, 0, 63, 76, 3, 6, 3, 0, 64, 65, 5, 35, 0, 0, 65, 66, 5, 5, 0,
+		0, 66, 67, 5, 35, 0, 0, 67, 76, 3, 6, 3, 0, 68, 76, 5, 41, 0, 0, 69, 76,
+		5, 37, 0, 0, 70, 76, 5, 39, 0, 0, 71, 72, 5, 1, 0, 0, 72, 73, 3, 4, 2,
 		0, 73, 74, 5, 2, 0, 0, 74, 76, 1, 0, 0, 0, 75, 46, 1, 0, 0, 0, 75, 50,
 		1, 0, 0, 0, 75, 62, 1, 0, 0, 0, 75, 64, 1, 0, 0, 0, 75, 68, 1, 0, 0, 0,
 		75, 69, 1, 0, 0, 0, 75, 70, 1, 0, 0, 0, 75, 71, 1, 0, 0, 0, 76, 94, 1,
-		0, 0, 0, 77, 78, 10, 13, 0, 0, 78, 79, 5, 11, 0, 0, 79, 93, 3, 4, 2, 14,
-		80, 81, 10, 12, 0, 0, 81, 82, 5, 9, 0, 0, 82, 93, 3, 4, 2, 13, 83, 84,
-		10, 11, 0, 0, 84, 85, 5, 10, 0, 0, 85, 93, 3, 4, 2, 12, 86, 87, 10, 10,
-		0, 0, 87, 88, 5, 7, 0, 0, 88, 93, 3, 4, 2, 11, 89, 90, 10, 9, 0, 0, 90,
-		91, 5, 8, 0, 0, 91, 93, 3, 4, 2, 10, 92, 77, 1, 0, 0, 0, 92, 80, 1, 0,
+		0, 0, 0, 77, 78, 10, 13, 0, 0, 78, 79, 5, 12, 0, 0, 79, 93, 3, 4, 2, 14,
+		80, 81, 10, 12, 0, 0, 81, 82, 5, 10, 0, 0, 82, 93, 3, 4, 2, 13, 83, 84,
+		10, 11, 0, 0, 84, 85, 5, 11, 0, 0, 85, 93, 3, 4, 2, 12, 86, 87, 10, 10,
+		0, 0, 87, 88, 5, 8, 0, 0, 88, 93, 3, 4, 2, 11, 89, 90, 10, 9, 0, 0, 90,
+		91, 5, 9, 0, 0, 91, 93, 3, 4, 2, 10, 92, 77, 1, 0, 0, 0, 92, 80, 1, 0,
 		0, 0, 92, 83, 1, 0, 0, 0, 92, 86, 1, 0, 0, 0, 92, 89, 1, 0, 0, 0, 93, 96,
 		1, 0, 0, 0, 94, 92, 1, 0, 0, 0, 94, 95, 1, 0, 0, 0, 95, 5, 1, 0, 0, 0,
-		96, 94, 1, 0, 0, 0, 97, 98, 5, 5, 0, 0, 98, 99, 7, 1, 0, 0, 99, 100, 5,
-		6, 0, 0, 100, 7, 1, 0, 0, 0, 7, 33, 41, 43, 57, 75, 92, 94,
+		96, 94, 1, 0, 0, 0, 97, 98, 5, 3, 0, 0, 98, 99, 7, 1, 0, 0, 99, 100, 5,
+		4, 0, 0, 100, 7, 1, 0, 0, 0, 7, 33, 41, 43, 57, 75, 92, 94,
 	}
 	deserializer := antlr.NewATNDeserializer(nil)
 	staticData.atn = deserializer.Deserialize(staticData.serializedATN)
@@ -131,47 +134,48 @@ func NewunoParser(input antlr.TokenStream) *unoParser {
 // unoParser tokens.
 const (
 	unoParserEOF            = antlr.TokenEOF
-	unoParserT__0           = 1
-	unoParserT__1           = 2
-	unoParserT__2           = 3
-	unoParserT__3           = 4
-	unoParserT__4           = 5
-	unoParserT__5           = 6
-	unoParserT_ADD          = 7
-	unoParserT_SUB          = 8
-	unoParserT_MUL          = 9
-	unoParserT_DIV          = 10
-	unoParserT_MOD          = 11
-	unoParserT_INT          = 12
-	unoParserT_INTS         = 13
-	unoParserT_FLOAT        = 14
-	unoParserT_FLOATS       = 15
-	unoParserT_STRING       = 16
-	unoParserT_STRINGS      = 17
-	unoParserT_ON           = 18
-	unoParserT_AND          = 19
-	unoParserT_OR           = 20
-	unoParserT_NOT          = 21
-	unoParserT_IN           = 22
-	unoParserT_TRUE         = 23
-	unoParserT_FALSE        = 24
-	unoParserT_COMPARE      = 25
-	unoParserT_EQUAL        = 26
-	unoParserT_EQUAL2       = 27
-	unoParserT_NOTEQUAL     = 28
-	unoParserT_NOTEQUAL2    = 29
-	unoParserT_GREATER      = 30
-	unoParserT_GREATEREQUAL = 31
-	unoParserT_LESS         = 32
-	unoParserT_LESSEQUAL    = 33
-	unoParserIDENTIFIER     = 34
-	unoParserINTEGER_LIST   = 35
-	unoParserINTEGER        = 36
-	unoParserDECIMAL_LIST   = 37
-	unoParserDECIMAL        = 38
-	unoParserSTRING_LIST    = 39
-	unoParserSTRING         = 40
-	unoParserWS             = 41
+	unoParserBRACKET_OPEN   = 1
+	unoParserBRACKET_CLOSE  = 2
+	unoParserSQUARE_OPEN    = 3
+	unoParserSQUARE_CLOSE   = 4
+	unoParserDOT            = 5
+	unoParserCOMMA          = 6
+	unoParserQUOTA          = 7
+	unoParserT_ADD          = 8
+	unoParserT_SUB          = 9
+	unoParserT_MUL          = 10
+	unoParserT_DIV          = 11
+	unoParserT_MOD          = 12
+	unoParserT_INT          = 13
+	unoParserT_INTS         = 14
+	unoParserT_FLOAT        = 15
+	unoParserT_FLOATS       = 16
+	unoParserT_STRING       = 17
+	unoParserT_STRINGS      = 18
+	unoParserT_ON           = 19
+	unoParserT_AND          = 20
+	unoParserT_OR           = 21
+	unoParserT_NOT          = 22
+	unoParserT_IN           = 23
+	unoParserT_TRUE         = 24
+	unoParserT_FALSE        = 25
+	unoParserT_COMPARE      = 26
+	unoParserT_EQUAL        = 27
+	unoParserT_EQUAL2       = 28
+	unoParserT_NOTEQUAL     = 29
+	unoParserT_NOTEQUAL2    = 30
+	unoParserT_GREATER      = 31
+	unoParserT_GREATEREQUAL = 32
+	unoParserT_LESS         = 33
+	unoParserT_LESSEQUAL    = 34
+	unoParserIDENTIFIER     = 35
+	unoParserINTEGER_LIST   = 36
+	unoParserINTEGER        = 37
+	unoParserDECIMAL_LIST   = 38
+	unoParserDECIMAL        = 39
+	unoParserSTRING_LIST    = 40
+	unoParserSTRING         = 41
+	unoParserWS             = 42
 )
 
 // unoParser rules.
@@ -492,6 +496,10 @@ func (s *PlainBooleanExpressionContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
+func (s *PlainBooleanExpressionContext) BRACKET_OPEN() antlr.TerminalNode {
+	return s.GetToken(unoParserBRACKET_OPEN, 0)
+}
+
 func (s *PlainBooleanExpressionContext) Boolean_expression() IBoolean_expressionContext {
 	var t antlr.RuleContext
 	for _, ctx := range s.GetChildren() {
@@ -506,6 +514,10 @@ func (s *PlainBooleanExpressionContext) Boolean_expression() IBoolean_expression
 	}
 
 	return t.(IBoolean_expressionContext)
+}
+
+func (s *PlainBooleanExpressionContext) BRACKET_CLOSE() antlr.TerminalNode {
+	return s.GetToken(unoParserBRACKET_CLOSE, 0)
 }
 
 func (s *PlainBooleanExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
@@ -952,7 +964,7 @@ func (p *unoParser) boolean_expression(_p int) (localctx IBoolean_expressionCont
 			p.SetState(20)
 			_la = p.GetTokenStream().LA(1)
 
-			if !((int64(_la) & ^0x3f) == 0 && ((int64(1)<<_la)&721554505728) != 0) {
+			if !((int64(_la) & ^0x3f) == 0 && ((int64(1)<<_la)&1443109011456) != 0) {
 				p.GetErrorHandler().RecoverInline(p)
 			} else {
 				p.GetErrorHandler().ReportMatch(p)
@@ -980,7 +992,7 @@ func (p *unoParser) boolean_expression(_p int) (localctx IBoolean_expressionCont
 			p.SetState(25)
 			_la = p.GetTokenStream().LA(1)
 
-			if !((int64(_la) & ^0x3f) == 0 && ((int64(1)<<_la)&721554505728) != 0) {
+			if !((int64(_la) & ^0x3f) == 0 && ((int64(1)<<_la)&1443109011456) != 0) {
 				p.GetErrorHandler().RecoverInline(p)
 			} else {
 				p.GetErrorHandler().ReportMatch(p)
@@ -994,7 +1006,7 @@ func (p *unoParser) boolean_expression(_p int) (localctx IBoolean_expressionCont
 		_prevctx = localctx
 		{
 			p.SetState(27)
-			p.Match(unoParserT__0)
+			p.Match(unoParserBRACKET_OPEN)
 		}
 		{
 			p.SetState(28)
@@ -1002,7 +1014,7 @@ func (p *unoParser) boolean_expression(_p int) (localctx IBoolean_expressionCont
 		}
 		{
 			p.SetState(29)
-			p.Match(unoParserT__1)
+			p.Match(unoParserBRACKET_CLOSE)
 		}
 
 	case 6:
@@ -1150,6 +1162,10 @@ func (s *PlainArithmeticExpressionContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
+func (s *PlainArithmeticExpressionContext) BRACKET_OPEN() antlr.TerminalNode {
+	return s.GetToken(unoParserBRACKET_OPEN, 0)
+}
+
 func (s *PlainArithmeticExpressionContext) Arithmetic_expression() IArithmetic_expressionContext {
 	var t antlr.RuleContext
 	for _, ctx := range s.GetChildren() {
@@ -1164,6 +1180,10 @@ func (s *PlainArithmeticExpressionContext) Arithmetic_expression() IArithmetic_e
 	}
 
 	return t.(IArithmetic_expressionContext)
+}
+
+func (s *PlainArithmeticExpressionContext) BRACKET_CLOSE() antlr.TerminalNode {
+	return s.GetToken(unoParserBRACKET_CLOSE, 0)
 }
 
 func (s *PlainArithmeticExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
@@ -1377,6 +1397,10 @@ func (s *FuncArithmeticExpressionContext) IDENTIFIER() antlr.TerminalNode {
 	return s.GetToken(unoParserIDENTIFIER, 0)
 }
 
+func (s *FuncArithmeticExpressionContext) BRACKET_OPEN() antlr.TerminalNode {
+	return s.GetToken(unoParserBRACKET_OPEN, 0)
+}
+
 func (s *FuncArithmeticExpressionContext) AllArithmetic_expression() []IArithmetic_expressionContext {
 	children := s.GetChildren()
 	len := 0
@@ -1416,6 +1440,18 @@ func (s *FuncArithmeticExpressionContext) Arithmetic_expression(i int) IArithmet
 	}
 
 	return t.(IArithmetic_expressionContext)
+}
+
+func (s *FuncArithmeticExpressionContext) BRACKET_CLOSE() antlr.TerminalNode {
+	return s.GetToken(unoParserBRACKET_CLOSE, 0)
+}
+
+func (s *FuncArithmeticExpressionContext) AllCOMMA() []antlr.TerminalNode {
+	return s.GetTokens(unoParserCOMMA)
+}
+
+func (s *FuncArithmeticExpressionContext) COMMA(i int) antlr.TerminalNode {
+	return s.GetToken(unoParserCOMMA, i)
 }
 
 func (s *FuncArithmeticExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
@@ -1579,6 +1615,10 @@ func (s *FieldColumnArithmeticExpressionContext) AllIDENTIFIER() []antlr.Termina
 
 func (s *FieldColumnArithmeticExpressionContext) IDENTIFIER(i int) antlr.TerminalNode {
 	return s.GetToken(unoParserIDENTIFIER, i)
+}
+
+func (s *FieldColumnArithmeticExpressionContext) DOT() antlr.TerminalNode {
+	return s.GetToken(unoParserDOT, 0)
 }
 
 func (s *FieldColumnArithmeticExpressionContext) Type_marker() IType_markerContext {
@@ -1781,6 +1821,14 @@ func (s *RuntTimeFuncArithmeticExpressionContext) IDENTIFIER() antlr.TerminalNod
 	return s.GetToken(unoParserIDENTIFIER, 0)
 }
 
+func (s *RuntTimeFuncArithmeticExpressionContext) BRACKET_OPEN() antlr.TerminalNode {
+	return s.GetToken(unoParserBRACKET_OPEN, 0)
+}
+
+func (s *RuntTimeFuncArithmeticExpressionContext) BRACKET_CLOSE() antlr.TerminalNode {
+	return s.GetToken(unoParserBRACKET_CLOSE, 0)
+}
+
 func (s *RuntTimeFuncArithmeticExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(unoListener); ok {
 		listenerT.EnterRuntTimeFuncArithmeticExpression(s)
@@ -1918,11 +1966,11 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 		}
 		{
 			p.SetState(48)
-			p.Match(unoParserT__0)
+			p.Match(unoParserBRACKET_OPEN)
 		}
 		{
 			p.SetState(49)
-			p.Match(unoParserT__1)
+			p.Match(unoParserBRACKET_CLOSE)
 		}
 
 	case 2:
@@ -1935,7 +1983,7 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 		}
 		{
 			p.SetState(51)
-			p.Match(unoParserT__0)
+			p.Match(unoParserBRACKET_OPEN)
 		}
 		{
 			p.SetState(52)
@@ -1945,10 +1993,10 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 		p.GetErrorHandler().Sync(p)
 		_la = p.GetTokenStream().LA(1)
 
-		for _la == unoParserT__2 {
+		for _la == unoParserCOMMA {
 			{
 				p.SetState(53)
-				p.Match(unoParserT__2)
+				p.Match(unoParserCOMMA)
 			}
 			{
 				p.SetState(54)
@@ -1961,7 +2009,7 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 		}
 		{
 			p.SetState(60)
-			p.Match(unoParserT__1)
+			p.Match(unoParserBRACKET_CLOSE)
 		}
 
 	case 3:
@@ -1987,7 +2035,7 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 		}
 		{
 			p.SetState(65)
-			p.Match(unoParserT__3)
+			p.Match(unoParserDOT)
 		}
 		{
 			p.SetState(66)
@@ -2031,7 +2079,7 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 		_prevctx = localctx
 		{
 			p.SetState(71)
-			p.Match(unoParserT__0)
+			p.Match(unoParserBRACKET_OPEN)
 		}
 		{
 			p.SetState(72)
@@ -2039,7 +2087,7 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 		}
 		{
 			p.SetState(73)
-			p.Match(unoParserT__1)
+			p.Match(unoParserBRACKET_CLOSE)
 		}
 
 	}
@@ -2161,6 +2209,8 @@ type IType_markerContext interface {
 	GetParser() antlr.Parser
 
 	// Getter signatures
+	SQUARE_OPEN() antlr.TerminalNode
+	SQUARE_CLOSE() antlr.TerminalNode
 	T_INT() antlr.TerminalNode
 	T_FLOAT() antlr.TerminalNode
 	T_STRING() antlr.TerminalNode
@@ -2198,6 +2248,14 @@ func NewType_markerContext(parser antlr.Parser, parent antlr.ParserRuleContext, 
 }
 
 func (s *Type_markerContext) GetParser() antlr.Parser { return s.parser }
+
+func (s *Type_markerContext) SQUARE_OPEN() antlr.TerminalNode {
+	return s.GetToken(unoParserSQUARE_OPEN, 0)
+}
+
+func (s *Type_markerContext) SQUARE_CLOSE() antlr.TerminalNode {
+	return s.GetToken(unoParserSQUARE_CLOSE, 0)
+}
 
 func (s *Type_markerContext) T_INT() antlr.TerminalNode {
 	return s.GetToken(unoParserT_INT, 0)
@@ -2270,13 +2328,13 @@ func (p *unoParser) Type_marker() (localctx IType_markerContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(97)
-		p.Match(unoParserT__4)
+		p.Match(unoParserSQUARE_OPEN)
 	}
 	{
 		p.SetState(98)
 		_la = p.GetTokenStream().LA(1)
 
-		if !((int64(_la) & ^0x3f) == 0 && ((int64(1)<<_la)&258048) != 0) {
+		if !((int64(_la) & ^0x3f) == 0 && ((int64(1)<<_la)&516096) != 0) {
 			p.GetErrorHandler().RecoverInline(p)
 		} else {
 			p.GetErrorHandler().ReportMatch(p)
@@ -2285,7 +2343,7 @@ func (p *unoParser) Type_marker() (localctx IType_markerContext) {
 	}
 	{
 		p.SetState(99)
-		p.Match(unoParserT__5)
+		p.Match(unoParserSQUARE_CLOSE)
 	}
 
 	return localctx

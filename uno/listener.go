@@ -90,24 +90,24 @@ func (s *Listener) ExitNotInBooleanExpression(ctx *NotInBooleanExpressionContext
 	if ctx.DECIMAL_LIST() != nil {
 		list := s.parseDecimalList(ctx.DECIMAL_LIST().GetText())
 		array := &Float32s{value: list}
-		if expr.GetDataType() != sample.Float32sType {
+		if expr.GetDataType() != sample.Float32Type {
 			panic("DataType Mismatch")
 		}
 		s.booleans.Push(&NotIn{left: expr, right: array, dtype: sample.Float32Type})
 	} else if ctx.INTEGER_LIST() != nil {
-		if expr.GetDataType() != sample.Int64sType {
+		if expr.GetDataType() != sample.Int64Type {
 			panic("DataType Mismatch")
 		}
 		list := s.parseIntegerList(ctx.INTEGER_LIST().GetText())
 		array := &Int64s{value: list}
-		s.booleans.Push(&NotIn{left: expr, right: array, dtype: sample.Int64sType})
+		s.booleans.Push(&NotIn{left: expr, right: array, dtype: sample.Int64Type})
 	} else {
-		if expr.GetDataType() != sample.StringsType {
+		if expr.GetDataType() != sample.StringType {
 			panic("DataType MisMatch")
 		}
 		list := s.parseStringList(ctx.STRING_LIST().GetText())
 		array := &Strings{value: list}
-		s.booleans.Push(&NotIn{left: expr, right: array, dtype: sample.StringsType})
+		s.booleans.Push(&NotIn{left: expr, right: array, dtype: sample.StringType})
 	}
 }
 
@@ -121,26 +121,26 @@ func (s *Listener) ExitInBooleanExpression(ctx *InBooleanExpressionContext) {
 	expr := s.arithmetics.Pop()
 
 	if ctx.DECIMAL_LIST() != nil {
-		if expr.GetDataType() != sample.Float32sType {
+		if expr.GetDataType() != sample.Float32Type {
 			panic("DataType Mismatch")
 		}
 		list := s.parseDecimalList(ctx.DECIMAL_LIST().GetText())
 		array := &Float32s{value: list}
-		s.booleans.Push(&In{left: expr, right: array, dtype: sample.Float32sType})
+		s.booleans.Push(&In{left: expr, right: array, dtype: sample.Float32Type})
 	} else if ctx.INTEGER_LIST() != nil {
-		if expr.GetDataType() != sample.Int64sType {
+		if expr.GetDataType() != sample.Int64Type {
 			panic("DataType Mismatch")
 		}
 		list := s.parseIntegerList(ctx.INTEGER_LIST().GetText())
 		array := &Int64s{value: list}
-		s.booleans.Push(&In{left: expr, right: array, dtype: sample.Int64sType})
+		s.booleans.Push(&In{left: expr, right: array, dtype: sample.Int64Type})
 	} else {
-		if expr.GetDataType() != sample.StringsType {
+		if expr.GetDataType() != sample.StringType {
 			panic("DataType Mismatch")
 		}
 		list := s.parseStringList(ctx.STRING_LIST().GetText())
 		array := &Strings{value: list}
-		s.booleans.Push(&In{left: expr, right: array, dtype: sample.StringsType})
+		s.booleans.Push(&In{left: expr, right: array, dtype: sample.StringType})
 	}
 }
 

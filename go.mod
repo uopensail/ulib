@@ -4,8 +4,8 @@ go 1.19
 
 require (
 	github.com/aliyun/aliyun-oss-go-sdk v2.2.9+incompatible
+	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230219212500-1f9a474cc2dc
 	github.com/antlr4-go/antlr v0.0.0-20230518091524-98b52378c522
-	github.com/antlr4-go/antlr/v4 v4.13.0
 	github.com/aws/aws-sdk-go v1.45.16
 	github.com/bytedance/sonic v1.10.0
 	github.com/go-kratos/kratos/contrib/registry/etcd/v2 v2.0.0-20230830131453-6c026bce56a9
@@ -39,7 +39,6 @@ require (
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.11.1 // indirect
-	github.com/spf13/cast v1.5.1
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.9 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.9 // indirect

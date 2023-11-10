@@ -29,7 +29,7 @@ arithmetic_expression   : arithmetic_expression T_MOD arithmetic_expression     
                         | '(' arithmetic_expression ')'                                                     # PlainArithmeticExpression
                         ;
 
-type_marker             : '[' (T_INT|T_FLOAT|T_STRING) ']' ;
+type_marker             : '[' (T_INT|T_FLOAT|T_STRING|T_INTS|T_FLOATS|T_STRINGS) ']' ;
 
 T_ADD                   : '+' ;
 T_SUB                   : '-' ;
@@ -39,8 +39,11 @@ T_MOD                   : '%' ;
 
 // reserved keywords
 T_INT                   : I N T '6' '4' ;
+T_INTS                  : I N T '6' '4' S ;
 T_FLOAT                 : F L O A T '3' '2' ;
+T_FLOATS                : F L O A T '3' '2' S ;
 T_STRING                : S T R I N G ;
+T_STRINGS               : S T R I N G S ;
 T_ON                    : O N ;
 T_AND                   : A N D ;
 T_OR                    : O R ;

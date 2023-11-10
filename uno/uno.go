@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/antlr4-go/antlr/v4"
+	"github.com/antlr/antlr4/runtime/Go/antlr/v4"
 	"github.com/uopensail/ulib/sample"
 	"github.com/uopensail/ulib/zlog"
 	"go.uber.org/zap"
@@ -240,7 +240,7 @@ func check(condition string) (err error) {
 	lexer := NewunoLexer(s)
 	tokens := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 	parser := NewunoParser(tokens)
-	parser.Start_()
+	parser.Start()
 	return
 }
 
@@ -255,7 +255,7 @@ func parse(condition string) (code string, err error) {
 	tokens := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 	parser := NewunoParser(tokens)
 	listener := NewListener()
-	antlr.ParseTreeWalkerDefault.Walk(listener, parser.Start_())
+	antlr.ParseTreeWalkerDefault.Walk(listener, parser.Start())
 	root := listener.booleans.Pop()
 	root = root.Simplify()
 	nodes := root.ToList()

@@ -383,13 +383,13 @@ func (i *NotIn) Simplify() BooleanExpression {
 		return i
 	}
 
-	if i.dtype == sample.Int64Type {
+	if i.dtype == sample.Int64sType {
 		status := inarray[int64](i.left.(*Int64).value, i.right.(*Int64s).value)
 		return &Literal{value: !status}
-	} else if i.dtype == sample.Float32Type {
+	} else if i.dtype == sample.Float32sType {
 		status := inarray[float32](i.left.(*Float32).value, i.right.(*Float32s).value)
 		return &Literal{value: !status}
-	} else if i.dtype == sample.StringType {
+	} else if i.dtype == sample.StringsType {
 		status := inarray[string](i.left.(*String).value, i.right.(*Strings).value)
 		return &Literal{value: !status}
 	}

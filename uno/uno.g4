@@ -1,19 +1,6 @@
 // antlr4 -Dlanguage=Go uno.g4 -package uno
 grammar uno;
 options { caseInsensitive=true; }
-BRACKET_OPEN        : '(';
-BRACKET_CLOSE       : ')';
-SQUARE_OPEN         : '[';
-SQUARE_CLOSE        : ']';
-DOT                 : '.';
-COMMA: ',';
-QUOTA: '"';
-T_ADD                   : '+' ;
-T_SUB                   : '-' ;
-T_MUL                   : '*' ;
-T_DIV                   : '/' ;
-T_MOD                   : '%' ;
-
 
 start                   : boolean_expression EOF;
 
@@ -46,6 +33,20 @@ arithmetic_expression   : arithmetic_expression T_MOD arithmetic_expression     
 type_marker             : SQUARE_OPEN (T_INT|T_FLOAT|T_STRING|T_INTS|T_FLOATS|T_STRINGS) SQUARE_CLOSE ;
 
 
+BRACKET_OPEN        : '(';
+BRACKET_CLOSE       : ')';
+SQUARE_OPEN         : '[';
+SQUARE_CLOSE        : ']';
+DOT                 : '.';
+COMMA: ',';
+QUOTA: '"';
+
+T_ADD                   : '+' ;
+T_SUB                   : '-' ;
+T_MUL                   : '*' ;
+T_DIV                   : '/' ;
+T_MOD                   : '%' ;
+
 
 // reserved keywords
 T_INT                   : 'int64';
@@ -54,7 +55,7 @@ T_FLOAT                 : 'float32';
 T_FLOATS                : 'float32s';
 T_STRING                : 'string';
 T_STRINGS               : 'strings';
-T_ON                    : 'ON' ;
+T_ON                    : 'on' ;
 T_AND                   : 'and' ;
 T_OR                    : 'or' ;
 T_NOT                   : 'not';

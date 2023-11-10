@@ -46,7 +46,7 @@ func unolexerLexerInit() {
 	staticData.literalNames = []string{
 		"", "'('", "')'", "'['", "']'", "'.'", "','", "'\"'", "'+'", "'-'",
 		"'*'", "'/'", "'%'", "'int64'", "'int64s'", "'float32'", "'float32s'",
-		"'string'", "'strings'", "'ON'", "'and'", "'or'", "'not'", "'in'", "'true'",
+		"'string'", "'strings'", "'on'", "'and'", "'or'", "'not'", "'in'", "'true'",
 		"'false'", "", "'='", "'=='", "'<>'", "'!='", "'>'", "'>='", "'<'",
 		"'<='",
 	}

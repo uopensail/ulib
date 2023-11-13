@@ -3,6 +3,8 @@ package uno
 import (
 	"fmt"
 	"testing"
+
+	"github.com/uopensail/ulib/sample"
 )
 
 func TestIn(t *testing.T) {
@@ -49,6 +51,35 @@ func TestIn(t *testing.T) {
 
 }
 
+func Test_Fill(t *testing.T) {
+	{
+		condition := `table_a.d_s_language[string] = user.u_s_language[string]`
+		instance, err := NewEvaluator(condition)
+		if err != nil {
+			fmt.Printf("%v\n", err)
+			return
+		}
+		dFeat := sample.NewMutableFeatures()
+		dFeat.Set("d_s_language", &sample.String{Value: "en"})
+
+		slice := instance.Allocate()
+		instance.Fill("table_a", dFeat, slice)
+		uFeat := sample.NewMutableFeatures()
+		uFeat.Set("u_s_language", &sample.String{Value: "fr"})
+		instance.Fill("user", uFeat, slice)
+		if instance.Eval(slice) != 0 {
+			t.FailNow()
+		}
+
+		uFeat.Set("u_s_language", &sample.String{Value: "en"})
+		instance.Fill("user", uFeat, slice)
+		if instance.Eval(slice) != 1 {
+			t.FailNow()
+		}
+
+	}
+}
+
 func TestEval(t *testing.T) {
 	condition := `v[float32] > 1000.0+1.5+2.9`
 	instance, err := NewEvaluator(condition)
@@ -57,7 +88,7 @@ func TestEval(t *testing.T) {
 		return
 	}
 	slice := instance.Allocate()
-	defer instance.Clean(slice)
+
 	fmt.Printf("%v\n", slice)
 	err = instance.FillFloat32("", "v", float32(1001), slice)
 	fmt.Printf("%v\n", err)
@@ -67,7 +98,7 @@ func TestEval(t *testing.T) {
 		t.FailNow()
 	}
 	slice = instance.Allocate()
-	defer instance.Clean(slice)
+
 	err = instance.FillFloat32("", "v", float32(2001), slice)
 
 	if instance.Eval(slice) != 1 {

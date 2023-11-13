@@ -24,6 +24,7 @@ type Feature interface {
 
 type Features interface {
 	Keys() []string
+	Len() int
 	Get(string) Feature
 	MarshalJSON() ([]byte, error)
 	UnmarshalJSON(data []byte) error

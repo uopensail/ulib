@@ -32,6 +32,10 @@ func (f *MutableFeatures) Keys() []string {
 	return ret
 }
 
+func (f *MutableFeatures) Len() int {
+	return len(f.features)
+}
+
 func (f *MutableFeatures) Get(key string) Feature {
 	if value, ok := f.features[key]; ok {
 		return value

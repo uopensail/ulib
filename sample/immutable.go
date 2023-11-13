@@ -65,7 +65,9 @@ func (f *ImmutableFeatures) Get(key string) Feature {
 	}
 	return nil
 }
-
+func (f *ImmutableFeatures) Len() int {
+	return len(f.features)
+}
 func (f *ImmutableFeatures) Keys() []string {
 	ret := make([]string, 0, len(f.features))
 	for key := range f.features {

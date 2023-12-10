@@ -3,6 +3,7 @@ package pool
 import (
 	"bufio"
 	"os"
+	"strings"
 
 	"github.com/bytedance/sonic"
 	"github.com/uopensail/ulib/datastruct"
@@ -38,7 +39,7 @@ type Pool struct {
 	dict            map[string]*Features
 }
 
-func NewPool(filepath string, keyField string) (*Pool, error) {
+func NewPool(filepath string) (*Pool, error) {
 	stat := prome.NewStat("NewPool")
 	defer stat.End()
 	file, err := os.Open(filepath)
@@ -60,23 +61,20 @@ func NewPool(filepath string, keyField string) (*Pool, error) {
 	index := 0
 	for scanner.Scan() {
 		line := scanner.Text()
+		ss := strings.Split(line, "\t")
+		if len(ss) != 2 {
+			zlog.LOG.Warn("ingore line", zap.String("line", line))
+			continue
+		}
 		feas := sample.NewImmutableFeatures(pool.area)
-		err = sonic.UnmarshalString(line, feas)
+		err = sonic.UnmarshalString(ss[1], feas)
 		if err != nil {
 			zlog.LOG.Error("unmarshal immutableFeatures error", zap.String("data", line), zap.Error(err))
 			continue
 		}
 
-		keyFea := feas.Get(keyField)
-		if keyFea.Type() != sample.StringType {
-			zlog.LOG.Error("key type not string", zap.Any("type", keyFea.Type()))
-			continue
-		}
-		if err != nil {
-			zlog.LOG.Error("get key error", zap.String("data", line), zap.Error(err))
-			continue
-		}
-		key, _ := keyFea.GetString()
+		key := ss[0]
+
 		w := Features{Feats: *feas, ID: index, key: key}
 		pool.Array = append(pool.Array, w)
 		pool.ids = append(pool.ids, datastruct.Tuple[string, float32]{First: key, Second: 0.0})

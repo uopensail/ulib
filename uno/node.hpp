@@ -62,6 +62,7 @@ struct Node {
   virtual void operator()(VarSlice *) {}
 };
 
+using Node = struct Node;
 using NodePtrSlice = Slice<Node *>;
 
 struct VarNode : Node {
@@ -76,6 +77,7 @@ struct VarNode : Node {
   virtual NodeType type() { return NodeType::kVarNode; }
   virtual void operator()(VarSlice *vars) {}
 };
+using VarNode = struct VarNode;
 
 struct LiteralNode : Node {
   bool value;
@@ -93,6 +95,7 @@ struct LiteralNode : Node {
     (*vars)[id] = v;
   }
 };
+using LiteralNode = struct LiteralNode;
 
 struct Int64Node : Node {
   int64_t value;
@@ -112,6 +115,7 @@ struct Int64Node : Node {
     (*vars)[id] = v;
   }
 };
+using Int64Node = struct Int64Node;
 
 struct Int64SliceNode : Node {
   Int64Slice value;
@@ -132,6 +136,7 @@ struct Int64SliceNode : Node {
     (*vars)[id] = v;
   }
 };
+using Int64SliceNode = struct Int64SliceNode;
 
 struct Float32Node : Node {
   float value;
@@ -150,6 +155,7 @@ struct Float32Node : Node {
     (*vars)[id] = v;
   }
 };
+using Float32Node = struct Float32Node;
 
 struct Float32SliceNode : Node {
   Float32Slice value;
@@ -173,6 +179,7 @@ struct Float32SliceNode : Node {
     (*vars)[id] = v;
   }
 };
+using Float32SliceNode = struct Float32SliceNode;
 
 struct StringNode : Node {
   std::string value;
@@ -193,6 +200,7 @@ struct StringNode : Node {
     (*vars)[id] = v;
   }
 };
+using StringNode = struct StringNode;
 
 struct StringSliceNode : Node {
   StringSlice value;
@@ -221,6 +229,7 @@ struct StringSliceNode : Node {
     (*vars)[id] = v;
   }
 };
+using StringSliceNode = struct StringSliceNode;
 
 struct FunctionNode : Node {
   Function func;
@@ -246,6 +255,7 @@ struct FunctionNode : Node {
     (*vars)[id] = func(vars);
   }
 };
+using FunctionNode = struct FunctionNode;
 
 struct AndNode : Node {
   int32_t left;
@@ -291,6 +301,7 @@ struct AndNode : Node {
     }
   }
 };
+using AndNode = struct AndNode;
 
 struct OrNode : Node {
   int32_t left;
@@ -332,23 +343,25 @@ struct OrNode : Node {
     }
   }
 };
+using OrNode = struct OrNode;
 
-template <typename T> static bool Compare(CmpType op, T *a, T *b) {
+template <typename T>
+static bool Compare(CmpType op, T *a, T *b) {
   switch (op) {
-  case kEqual:
-    return *a == *b;
-  case kNotEqual:
-    return *a != *b;
-  case kGreaterThan:
-    return *a > *b;
-  case kGreaterThanEqual:
-    return *a >= *b;
-  case kLessThan:
-    return *a < *b;
-  case kLessThanEqual:
-    return *a <= *b;
-  default:
-    return false;
+    case kEqual:
+      return *a == *b;
+    case kNotEqual:
+      return *a != *b;
+    case kGreaterThan:
+      return *a > *b;
+    case kGreaterThanEqual:
+      return *a >= *b;
+    case kLessThan:
+      return *a < *b;
+    case kLessThanEqual:
+      return *a <= *b;
+    default:
+      return false;
   }
 }
 
@@ -394,8 +407,10 @@ struct CmpNode : Node {
     }
   }
 };
+using CmpNode = struct CmpNode;
 
-template <typename T> static bool InSlice(T &v, Slice<T> &slice) {
+template <typename T>
+static bool InSlice(T &v, Slice<T> &slice) {
   for (size_t i = 0; i < slice.size(); i++) {
     if (v == slice[i]) {
       return true;
@@ -404,7 +419,8 @@ template <typename T> static bool InSlice(T &v, Slice<T> &slice) {
   return false;
 }
 
-template <typename T> static bool NotInSlice(T &v, Slice<T> &slice) {
+template <typename T>
+static bool NotInSlice(T &v, Slice<T> &slice) {
   for (size_t i = 0; i < slice.size(); i++) {
     if (v == slice[i]) {
       return false;
@@ -455,6 +471,7 @@ struct InNode : Node {
     }
   }
 };
+using InNode = struct InNode;
 
 struct NotInNode : Node {
   int32_t left;
@@ -490,5 +507,6 @@ struct NotInNode : Node {
     }
   }
 };
+using NotInNode = struct NotInNode;
 
-#endif // UNO_NODE_HPP
+#endif  // UNO_NODE_HPP

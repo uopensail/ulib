@@ -1,11 +1,14 @@
 module github.com/uopensail/ulib
 
-go 1.19
+go 1.22
+
+toolchain go1.23.6
 
 require (
 	github.com/aliyun/aliyun-oss-go-sdk v2.2.9+incompatible
 	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230219212500-1f9a474cc2dc
 	github.com/antlr4-go/antlr v0.0.0-20230518091524-98b52378c522
+	github.com/antlr4-go/antlr/v4 v4.13.1
 	github.com/aws/aws-sdk-go v1.45.16
 	github.com/bytedance/sonic v1.10.0
 	github.com/go-kratos/kratos/contrib/registry/etcd/v2 v2.0.0-20230830131453-6c026bce56a9
@@ -44,7 +47,7 @@ require (
 	go.etcd.io/etcd/client/pkg/v3 v3.5.9 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.5.0 // indirect
-	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc // indirect
+	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect

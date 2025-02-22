@@ -32,9 +32,10 @@ type _Expression struct {
 type Evaluator struct {
 	expression unsafe.Pointer
 	columns    map[string]map[string]_Column
+	types      map[string]sample.DataType
 }
 
-func NewEvaluator(condition string) (*Evaluator, error) {
+func NewEvaluator(condition string, types map[string]sample.DataType) (*Evaluator, error) {
 	err := check(condition)
 	if err != nil {
 		return nil, err
@@ -240,11 +241,11 @@ func check(condition string) (err error) {
 	lexer := NewunoLexer(s)
 	tokens := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 	parser := NewunoParser(tokens)
-	parser.Start()
+	parser.Start_()
 	return
 }
 
-func parse(condition string) (code string, err error) {
+func parse(condition string, types map[string]sample.DataType) (code string, err error) {
 	defer func() {
 		if perr := recover(); perr != nil {
 			err = fmt.Errorf(perr.(string))
@@ -254,7 +255,7 @@ func parse(condition string) (code string, err error) {
 	lexer := NewunoLexer(s)
 	tokens := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 	parser := NewunoParser(tokens)
-	listener := NewListener()
+	listener := NewListener(types)
 	antlr.ParseTreeWalkerDefault.Walk(listener, parser.Start())
 	root := listener.booleans.Pop()
 	root = root.Simplify()

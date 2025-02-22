@@ -14,12 +14,14 @@ type Listener struct {
 	*antlr.DefaultErrorListener
 	arithmetics *Stack[ArithmeticExpression]
 	booleans    *Stack[BooleanExpression]
+	types       map[string]sample.DataType
 }
 
-func NewListener() *Listener {
+func NewListener(types map[string]sample.DataType) *Listener {
 	return &Listener{
 		arithmetics: NewStack[ArithmeticExpression](),
 		booleans:    NewStack[BooleanExpression](),
+		types:       types,
 	}
 }
 
@@ -203,24 +205,14 @@ func (s *Listener) ExitFuncArithmeticExpression(ctx *FuncArithmeticExpressionCon
 
 // ExitColumnArithmeticExpression is called when production ColumnArithmeticExpression is exited.
 func (s *Listener) ExitColumnArithmeticExpression(ctx *ColumnArithmeticExpressionContext) {
-	mark := ctx.Type_marker().GetText()
-	mark = strings.ToLower(mark)
 	column := ctx.IDENTIFIER().GetText()
-	dtype := sample.Float32Type
-	if mark == "[int64]" {
-		dtype = sample.Int64Type
-	} else if mark == "[int64s]" {
-		dtype = sample.Int64sType
-	} else if mark == "[float32]" {
-		dtype = sample.Float32Type
-	} else if mark == "[float32s]" {
-		dtype = sample.Float32sType
-	} else if mark == "[string]" {
-		dtype = sample.StringType
-	} else if mark == "[strings]" {
-		dtype = sample.StringsType
+	// default dtype is error
+	var dtype sample.DataType
+	var ok bool
+	if dtype, ok = s.types[column]; !ok {
+		dtype = sample.ErrorType
 	}
-	tmp := &Variable{value: fmt.Sprintf(".%s", column), dtype: dtype}
+	tmp := &Variable{value: column, dtype: dtype}
 	s.arithmetics.Push(tmp)
 }
 
@@ -252,29 +244,6 @@ func (s *Listener) ExitDivArithmeticExpression(ctx *DivArithmeticExpressionConte
 
 	tmp := &Function{function: function, args: []ArithmeticExpression{first, second}}
 	tmp.check()
-	s.arithmetics.Push(tmp)
-}
-
-// ExitFieldColumnArithmeticExpression is called when production FieldColumnArithmeticExpression is exited.
-func (s *Listener) ExitFieldColumnArithmeticExpression(ctx *FieldColumnArithmeticExpressionContext) {
-	mark := ctx.Type_marker().GetText()
-	mark = strings.ToLower(mark)
-	column := fmt.Sprintf("%s.%s", ctx.IDENTIFIER(0).GetText(), ctx.IDENTIFIER(1).GetText())
-	dtype := sample.Float32Type
-	if mark == "[int64]" {
-		dtype = sample.Int64Type
-	} else if mark == "[int64s]" {
-		dtype = sample.Int64sType
-	} else if mark == "[float32]" {
-		dtype = sample.Float32Type
-	} else if mark == "[float32s]" {
-		dtype = sample.Float32sType
-	} else if mark == "[string]" {
-		dtype = sample.StringType
-	} else if mark == "[strings]" {
-		dtype = sample.StringsType
-	}
-	tmp := &Variable{value: column, dtype: dtype}
 	s.arithmetics.Push(tmp)
 }
 

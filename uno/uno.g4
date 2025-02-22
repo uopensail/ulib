@@ -10,7 +10,7 @@ boolean_expression      : boolean_expression T_AND boolean_expression           
                         | T_NOT boolean_expression                                                          # NotBooleanExpression
                         | arithmetic_expression T_IN (INTEGER_LIST|STRING_LIST|DECIMAL_LIST)                # InBooleanExpression
                         | arithmetic_expression T_NOT T_IN (INTEGER_LIST|STRING_LIST|DECIMAL_LIST)          # NotInBooleanExpression
-                        | BRACKET_OPEN boolean_expression BRACKET_CLOSE                                                        # PlainBooleanExpression
+                        | BRACKET_OPEN boolean_expression BRACKET_CLOSE                                     # PlainBooleanExpression
                         | T_TRUE                                                                            # TrueBooleanExpression
                         | T_FALSE                                                                           # FalseBooleanExpression
                         ;
@@ -20,26 +20,22 @@ arithmetic_expression   : arithmetic_expression T_MOD arithmetic_expression     
                         | arithmetic_expression T_DIV arithmetic_expression                                 # DivArithmeticExpression
                         | arithmetic_expression T_ADD arithmetic_expression                                 # AddArithmeticExpression
                         | arithmetic_expression T_SUB arithmetic_expression                                 # SubArithmeticExpression
-                        | IDENTIFIER BRACKET_OPEN BRACKET_CLOSE                                                                # RuntTimeFuncArithmeticExpression
+                        | IDENTIFIER BRACKET_OPEN BRACKET_CLOSE                                             # RuntTimeFuncArithmeticExpression
                         | IDENTIFIER BRACKET_OPEN arithmetic_expression (COMMA arithmetic_expression)* BRACKET_CLOSE             # FuncArithmeticExpression
-                        | IDENTIFIER type_marker                                                            # ColumnArithmeticExpression
-                        | IDENTIFIER DOT IDENTIFIER type_marker                                            # FieldColumnArithmeticExpression
+                        | IDENTIFIER                                                                        # ColumnArithmeticExpression
                         | STRING                                                                            # StringArithmeticExpression
                         | INTEGER                                                                           # IntegerArithmeticExpression
                         | DECIMAL                                                                           # DecimalArithmeticExpression
-                        | BRACKET_OPEN arithmetic_expression BRACKET_CLOSE                                                     # PlainArithmeticExpression
+                        | BRACKET_OPEN arithmetic_expression BRACKET_CLOSE                                  # PlainArithmeticExpression
                         ;
 
-type_marker             : SQUARE_OPEN (T_INT|T_FLOAT|T_STRING|T_INTS|T_FLOATS|T_STRINGS) SQUARE_CLOSE ;
-
-
-BRACKET_OPEN        : '(';
-BRACKET_CLOSE       : ')';
-SQUARE_OPEN         : '[';
-SQUARE_CLOSE        : ']';
-DOT                 : '.';
-COMMA: ',';
-QUOTA: '"';
+BRACKET_OPEN            : '(';
+BRACKET_CLOSE           : ')';
+SQUARE_OPEN             : '[';
+SQUARE_CLOSE            : ']';
+DOT                     : '.';
+COMMA:                  ',';
+QUOTA:                  '"';
 
 T_ADD                   : '+' ;
 T_SUB                   : '-' ;
@@ -49,12 +45,6 @@ T_MOD                   : '%' ;
 
 
 // reserved keywords
-T_INT                   : 'int64';
-T_INTS                  : 'int64s' ;
-T_FLOAT                 : 'float32';
-T_FLOATS                : 'float32s';
-T_STRING                : 'string';
-T_STRINGS               : 'strings';
 T_ON                    : 'on' ;
 T_AND                   : 'and' ;
 T_OR                    : 'or' ;

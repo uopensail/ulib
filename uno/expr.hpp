@@ -21,13 +21,6 @@
 
 #include "node.hpp"
 
-struct Column {
-  int32_t addr;
-  GoString col;
-  DataType type;
-};
-using Column = struct Column;
-
 struct Columns {
   Int32Slice addr;
   StringSlice cols;

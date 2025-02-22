@@ -1,4 +1,4 @@
-// Code generated from uno.g4 by ANTLR 4.13.2. DO NOT EDIT.
+// Code generated from uno.g4 by ANTLR 4.12.0. DO NOT EDIT.
 
 package uno // uno
 import (
@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/antlr4-go/antlr/v4"
+	"github.com/antlr/antlr4/runtime/Go/antlr/v4"
 )
 
 // Suppress unused import errors
@@ -18,26 +18,26 @@ type unoParser struct {
 	*antlr.BaseParser
 }
 
-var UnoParserStaticData struct {
+var unoParserStaticData struct {
 	once                   sync.Once
 	serializedATN          []int32
-	LiteralNames           []string
-	SymbolicNames          []string
-	RuleNames              []string
-	PredictionContextCache *antlr.PredictionContextCache
+	literalNames           []string
+	symbolicNames          []string
+	ruleNames              []string
+	predictionContextCache *antlr.PredictionContextCache
 	atn                    *antlr.ATN
 	decisionToDFA          []*antlr.DFA
 }
 
 func unoParserInit() {
-	staticData := &UnoParserStaticData
-	staticData.LiteralNames = []string{
+	staticData := &unoParserStaticData
+	staticData.literalNames = []string{
 		"", "'('", "')'", "'['", "']'", "'.'", "','", "'\"'", "'+'", "'-'",
 		"'*'", "'/'", "'%'", "'on'", "'and'", "'or'", "'not'", "'in'", "'true'",
 		"'false'", "", "'='", "'=='", "'<>'", "'!='", "'>'", "'>='", "'<'",
 		"'<='",
 	}
-	staticData.SymbolicNames = []string{
+	staticData.symbolicNames = []string{
 		"", "BRACKET_OPEN", "BRACKET_CLOSE", "SQUARE_OPEN", "SQUARE_CLOSE",
 		"DOT", "COMMA", "QUOTA", "T_ADD", "T_SUB", "T_MUL", "T_DIV", "T_MOD",
 		"T_ON", "T_AND", "T_OR", "T_NOT", "T_IN", "T_TRUE", "T_FALSE", "T_COMPARE",
@@ -45,10 +45,10 @@ func unoParserInit() {
 		"T_LESS", "T_LESSEQUAL", "IDENTIFIER", "INTEGER_LIST", "INTEGER", "DECIMAL_LIST",
 		"DECIMAL", "STRING_LIST", "STRING", "WS",
 	}
-	staticData.RuleNames = []string{
+	staticData.ruleNames = []string{
 		"start", "boolean_expression", "arithmetic_expression",
 	}
-	staticData.PredictionContextCache = antlr.NewPredictionContextCache()
+	staticData.predictionContextCache = antlr.NewPredictionContextCache()
 	staticData.serializedATN = []int32{
 		4, 1, 36, 91, 2, 0, 7, 0, 2, 1, 7, 1, 2, 2, 7, 2, 1, 0, 1, 0, 1, 0, 1,
 		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -106,7 +106,7 @@ func unoParserInit() {
 // NewunoParser(). You can call this function if you wish to initialize the static state ahead
 // of time.
 func UnoParserInit() {
-	staticData := &UnoParserStaticData
+	staticData := &unoParserStaticData
 	staticData.once.Do(unoParserInit)
 }
 
@@ -115,11 +115,11 @@ func NewunoParser(input antlr.TokenStream) *unoParser {
 	UnoParserInit()
 	this := new(unoParser)
 	this.BaseParser = antlr.NewBaseParser(input)
-	staticData := &UnoParserStaticData
-	this.Interpreter = antlr.NewParserATNSimulator(this, staticData.atn, staticData.decisionToDFA, staticData.PredictionContextCache)
-	this.RuleNames = staticData.RuleNames
-	this.LiteralNames = staticData.LiteralNames
-	this.SymbolicNames = staticData.SymbolicNames
+	staticData := &unoParserStaticData
+	this.Interpreter = antlr.NewParserATNSimulator(this, staticData.atn, staticData.decisionToDFA, staticData.predictionContextCache)
+	this.RuleNames = staticData.ruleNames
+	this.LiteralNames = staticData.literalNames
+	this.SymbolicNames = staticData.symbolicNames
 	this.GrammarFileName = "uno.g4"
 
 	return this
@@ -189,20 +189,15 @@ type IStartContext interface {
 }
 
 type StartContext struct {
-	antlr.BaseParserRuleContext
+	*antlr.BaseParserRuleContext
 	parser antlr.Parser
 }
 
 func NewEmptyStartContext() *StartContext {
 	var p = new(StartContext)
-	antlr.InitBaseParserRuleContext(&p.BaseParserRuleContext, nil, -1)
+	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(nil, -1)
 	p.RuleIndex = unoParserRULE_start
 	return p
-}
-
-func InitEmptyStartContext(p *StartContext) {
-	antlr.InitBaseParserRuleContext(&p.BaseParserRuleContext, nil, -1)
-	p.RuleIndex = unoParserRULE_start
 }
 
 func (*StartContext) IsStartContext() {}
@@ -210,7 +205,7 @@ func (*StartContext) IsStartContext() {}
 func NewStartContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *StartContext {
 	var p = new(StartContext)
 
-	antlr.InitBaseParserRuleContext(&p.BaseParserRuleContext, parent, invokingState)
+	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(parent, invokingState)
 
 	p.parser = parser
 	p.RuleIndex = unoParserRULE_start
@@ -260,9 +255,29 @@ func (s *StartContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (p *unoParser) Start_() (localctx IStartContext) {
+func (p *unoParser) Start() (localctx IStartContext) {
+	this := p
+	_ = this
+
 	localctx = NewStartContext(p, p.GetParserRuleContext(), p.GetState())
 	p.EnterRule(localctx, 0, unoParserRULE_start)
+
+	defer func() {
+		p.ExitRule()
+	}()
+
+	defer func() {
+		if err := recover(); err != nil {
+			if v, ok := err.(antlr.RecognitionException); ok {
+				localctx.SetException(v)
+				p.GetErrorHandler().ReportError(p, v)
+				p.GetErrorHandler().Recover(p, v)
+			} else {
+				panic(err)
+			}
+		}
+	}()
+
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(6)
@@ -271,23 +286,9 @@ func (p *unoParser) Start_() (localctx IStartContext) {
 	{
 		p.SetState(7)
 		p.Match(unoParserEOF)
-		if p.HasError() {
-			// Recognition error - abort rule
-			goto errorExit
-		}
 	}
 
-errorExit:
-	if p.HasError() {
-		v := p.GetError()
-		localctx.SetException(v)
-		p.GetErrorHandler().ReportError(p, v)
-		p.GetErrorHandler().Recover(p, v)
-		p.SetError(nil)
-	}
-	p.ExitRule()
 	return localctx
-	goto errorExit // Trick to prevent compiler error if the label is not used
 }
 
 // IBoolean_expressionContext is an interface to support dynamic dispatch.
@@ -301,20 +302,15 @@ type IBoolean_expressionContext interface {
 }
 
 type Boolean_expressionContext struct {
-	antlr.BaseParserRuleContext
+	*antlr.BaseParserRuleContext
 	parser antlr.Parser
 }
 
 func NewEmptyBoolean_expressionContext() *Boolean_expressionContext {
 	var p = new(Boolean_expressionContext)
-	antlr.InitBaseParserRuleContext(&p.BaseParserRuleContext, nil, -1)
+	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(nil, -1)
 	p.RuleIndex = unoParserRULE_boolean_expression
 	return p
-}
-
-func InitEmptyBoolean_expressionContext(p *Boolean_expressionContext) {
-	antlr.InitBaseParserRuleContext(&p.BaseParserRuleContext, nil, -1)
-	p.RuleIndex = unoParserRULE_boolean_expression
 }
 
 func (*Boolean_expressionContext) IsBoolean_expressionContext() {}
@@ -322,7 +318,7 @@ func (*Boolean_expressionContext) IsBoolean_expressionContext() {}
 func NewBoolean_expressionContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *Boolean_expressionContext {
 	var p = new(Boolean_expressionContext)
 
-	antlr.InitBaseParserRuleContext(&p.BaseParserRuleContext, parent, invokingState)
+	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(parent, invokingState)
 
 	p.parser = parser
 	p.RuleIndex = unoParserRULE_boolean_expression
@@ -332,8 +328,8 @@ func NewBoolean_expressionContext(parser antlr.Parser, parent antlr.ParserRuleCo
 
 func (s *Boolean_expressionContext) GetParser() antlr.Parser { return s.parser }
 
-func (s *Boolean_expressionContext) CopyAll(ctx *Boolean_expressionContext) {
-	s.CopyFrom(&ctx.BaseParserRuleContext)
+func (s *Boolean_expressionContext) CopyFrom(ctx *Boolean_expressionContext) {
+	s.BaseParserRuleContext.CopyFrom(ctx.BaseParserRuleContext)
 }
 
 func (s *Boolean_expressionContext) GetRuleContext() antlr.RuleContext {
@@ -345,15 +341,15 @@ func (s *Boolean_expressionContext) ToStringTree(ruleNames []string, recog antlr
 }
 
 type CmpBooleanExpressionContext struct {
-	Boolean_expressionContext
+	*Boolean_expressionContext
 }
 
 func NewCmpBooleanExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *CmpBooleanExpressionContext {
 	var p = new(CmpBooleanExpressionContext)
 
-	InitEmptyBoolean_expressionContext(&p.Boolean_expressionContext)
+	p.Boolean_expressionContext = NewEmptyBoolean_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Boolean_expressionContext))
+	p.CopyFrom(ctx.(*Boolean_expressionContext))
 
 	return p
 }
@@ -420,15 +416,15 @@ func (s *CmpBooleanExpressionContext) ExitRule(listener antlr.ParseTreeListener)
 }
 
 type NotBooleanExpressionContext struct {
-	Boolean_expressionContext
+	*Boolean_expressionContext
 }
 
 func NewNotBooleanExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *NotBooleanExpressionContext {
 	var p = new(NotBooleanExpressionContext)
 
-	InitEmptyBoolean_expressionContext(&p.Boolean_expressionContext)
+	p.Boolean_expressionContext = NewEmptyBoolean_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Boolean_expressionContext))
+	p.CopyFrom(ctx.(*Boolean_expressionContext))
 
 	return p
 }
@@ -470,15 +466,15 @@ func (s *NotBooleanExpressionContext) ExitRule(listener antlr.ParseTreeListener)
 }
 
 type PlainBooleanExpressionContext struct {
-	Boolean_expressionContext
+	*Boolean_expressionContext
 }
 
 func NewPlainBooleanExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *PlainBooleanExpressionContext {
 	var p = new(PlainBooleanExpressionContext)
 
-	InitEmptyBoolean_expressionContext(&p.Boolean_expressionContext)
+	p.Boolean_expressionContext = NewEmptyBoolean_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Boolean_expressionContext))
+	p.CopyFrom(ctx.(*Boolean_expressionContext))
 
 	return p
 }
@@ -524,15 +520,15 @@ func (s *PlainBooleanExpressionContext) ExitRule(listener antlr.ParseTreeListene
 }
 
 type OrBooleanExpressionContext struct {
-	Boolean_expressionContext
+	*Boolean_expressionContext
 }
 
 func NewOrBooleanExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *OrBooleanExpressionContext {
 	var p = new(OrBooleanExpressionContext)
 
-	InitEmptyBoolean_expressionContext(&p.Boolean_expressionContext)
+	p.Boolean_expressionContext = NewEmptyBoolean_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Boolean_expressionContext))
+	p.CopyFrom(ctx.(*Boolean_expressionContext))
 
 	return p
 }
@@ -599,15 +595,15 @@ func (s *OrBooleanExpressionContext) ExitRule(listener antlr.ParseTreeListener) 
 }
 
 type TrueBooleanExpressionContext struct {
-	Boolean_expressionContext
+	*Boolean_expressionContext
 }
 
 func NewTrueBooleanExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *TrueBooleanExpressionContext {
 	var p = new(TrueBooleanExpressionContext)
 
-	InitEmptyBoolean_expressionContext(&p.Boolean_expressionContext)
+	p.Boolean_expressionContext = NewEmptyBoolean_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Boolean_expressionContext))
+	p.CopyFrom(ctx.(*Boolean_expressionContext))
 
 	return p
 }
@@ -633,15 +629,15 @@ func (s *TrueBooleanExpressionContext) ExitRule(listener antlr.ParseTreeListener
 }
 
 type AndBooleanExpressionContext struct {
-	Boolean_expressionContext
+	*Boolean_expressionContext
 }
 
 func NewAndBooleanExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *AndBooleanExpressionContext {
 	var p = new(AndBooleanExpressionContext)
 
-	InitEmptyBoolean_expressionContext(&p.Boolean_expressionContext)
+	p.Boolean_expressionContext = NewEmptyBoolean_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Boolean_expressionContext))
+	p.CopyFrom(ctx.(*Boolean_expressionContext))
 
 	return p
 }
@@ -708,15 +704,15 @@ func (s *AndBooleanExpressionContext) ExitRule(listener antlr.ParseTreeListener)
 }
 
 type NotInBooleanExpressionContext struct {
-	Boolean_expressionContext
+	*Boolean_expressionContext
 }
 
 func NewNotInBooleanExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *NotInBooleanExpressionContext {
 	var p = new(NotInBooleanExpressionContext)
 
-	InitEmptyBoolean_expressionContext(&p.Boolean_expressionContext)
+	p.Boolean_expressionContext = NewEmptyBoolean_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Boolean_expressionContext))
+	p.CopyFrom(ctx.(*Boolean_expressionContext))
 
 	return p
 }
@@ -774,15 +770,15 @@ func (s *NotInBooleanExpressionContext) ExitRule(listener antlr.ParseTreeListene
 }
 
 type FalseBooleanExpressionContext struct {
-	Boolean_expressionContext
+	*Boolean_expressionContext
 }
 
 func NewFalseBooleanExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *FalseBooleanExpressionContext {
 	var p = new(FalseBooleanExpressionContext)
 
-	InitEmptyBoolean_expressionContext(&p.Boolean_expressionContext)
+	p.Boolean_expressionContext = NewEmptyBoolean_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Boolean_expressionContext))
+	p.CopyFrom(ctx.(*Boolean_expressionContext))
 
 	return p
 }
@@ -808,15 +804,15 @@ func (s *FalseBooleanExpressionContext) ExitRule(listener antlr.ParseTreeListene
 }
 
 type InBooleanExpressionContext struct {
-	Boolean_expressionContext
+	*Boolean_expressionContext
 }
 
 func NewInBooleanExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *InBooleanExpressionContext {
 	var p = new(InBooleanExpressionContext)
 
-	InitEmptyBoolean_expressionContext(&p.Boolean_expressionContext)
+	p.Boolean_expressionContext = NewEmptyBoolean_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Boolean_expressionContext))
+	p.CopyFrom(ctx.(*Boolean_expressionContext))
 
 	return p
 }
@@ -874,8 +870,10 @@ func (p *unoParser) Boolean_expression() (localctx IBoolean_expressionContext) {
 }
 
 func (p *unoParser) boolean_expression(_p int) (localctx IBoolean_expressionContext) {
-	var _parentctx antlr.ParserRuleContext = p.GetParserRuleContext()
+	this := p
+	_ = this
 
+	var _parentctx antlr.ParserRuleContext = p.GetParserRuleContext()
 	_parentState := p.GetState()
 	localctx = NewBoolean_expressionContext(p, p.GetParserRuleContext(), _parentState)
 	var _prevctx IBoolean_expressionContext = localctx
@@ -884,16 +882,28 @@ func (p *unoParser) boolean_expression(_p int) (localctx IBoolean_expressionCont
 	p.EnterRecursionRule(localctx, 2, unoParserRULE_boolean_expression, _p)
 	var _la int
 
+	defer func() {
+		p.UnrollRecursionContexts(_parentctx)
+	}()
+
+	defer func() {
+		if err := recover(); err != nil {
+			if v, ok := err.(antlr.RecognitionException); ok {
+				localctx.SetException(v)
+				p.GetErrorHandler().ReportError(p, v)
+				p.GetErrorHandler().Recover(p, v)
+			} else {
+				panic(err)
+			}
+		}
+	}()
+
 	var _alt int
 
 	p.EnterOuterAlt(localctx, 1)
 	p.SetState(31)
 	p.GetErrorHandler().Sync(p)
-	if p.HasError() {
-		goto errorExit
-	}
-
-	switch p.GetInterpreter().AdaptivePredict(p.BaseParser, p.GetTokenStream(), 0, p.GetParserRuleContext()) {
+	switch p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 0, p.GetParserRuleContext()) {
 	case 1:
 		localctx = NewCmpBooleanExpressionContext(p, localctx)
 		p.SetParserRuleContext(localctx)
@@ -906,10 +916,6 @@ func (p *unoParser) boolean_expression(_p int) (localctx IBoolean_expressionCont
 		{
 			p.SetState(11)
 			p.Match(unoParserT_COMPARE)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 		{
 			p.SetState(12)
@@ -923,10 +929,6 @@ func (p *unoParser) boolean_expression(_p int) (localctx IBoolean_expressionCont
 		{
 			p.SetState(14)
 			p.Match(unoParserT_NOT)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 		{
 			p.SetState(15)
@@ -944,10 +946,6 @@ func (p *unoParser) boolean_expression(_p int) (localctx IBoolean_expressionCont
 		{
 			p.SetState(17)
 			p.Match(unoParserT_IN)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 		{
 			p.SetState(18)
@@ -972,18 +970,10 @@ func (p *unoParser) boolean_expression(_p int) (localctx IBoolean_expressionCont
 		{
 			p.SetState(21)
 			p.Match(unoParserT_NOT)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 		{
 			p.SetState(22)
 			p.Match(unoParserT_IN)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 		{
 			p.SetState(23)
@@ -1004,10 +994,6 @@ func (p *unoParser) boolean_expression(_p int) (localctx IBoolean_expressionCont
 		{
 			p.SetState(25)
 			p.Match(unoParserBRACKET_OPEN)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 		{
 			p.SetState(26)
@@ -1016,10 +1002,6 @@ func (p *unoParser) boolean_expression(_p int) (localctx IBoolean_expressionCont
 		{
 			p.SetState(27)
 			p.Match(unoParserBRACKET_CLOSE)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 
 	case 6:
@@ -1029,10 +1011,6 @@ func (p *unoParser) boolean_expression(_p int) (localctx IBoolean_expressionCont
 		{
 			p.SetState(29)
 			p.Match(unoParserT_TRUE)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 
 	case 7:
@@ -1042,25 +1020,14 @@ func (p *unoParser) boolean_expression(_p int) (localctx IBoolean_expressionCont
 		{
 			p.SetState(30)
 			p.Match(unoParserT_FALSE)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 
-	case antlr.ATNInvalidAltNumber:
-		goto errorExit
 	}
 	p.GetParserRuleContext().SetStop(p.GetTokenStream().LT(-1))
 	p.SetState(41)
 	p.GetErrorHandler().Sync(p)
-	if p.HasError() {
-		goto errorExit
-	}
-	_alt = p.GetInterpreter().AdaptivePredict(p.BaseParser, p.GetTokenStream(), 2, p.GetParserRuleContext())
-	if p.HasError() {
-		goto errorExit
-	}
+	_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 2, p.GetParserRuleContext())
+
 	for _alt != 2 && _alt != antlr.ATNInvalidAltNumber {
 		if _alt == 1 {
 			if p.GetParseListeners() != nil {
@@ -1069,27 +1036,18 @@ func (p *unoParser) boolean_expression(_p int) (localctx IBoolean_expressionCont
 			_prevctx = localctx
 			p.SetState(39)
 			p.GetErrorHandler().Sync(p)
-			if p.HasError() {
-				goto errorExit
-			}
-
-			switch p.GetInterpreter().AdaptivePredict(p.BaseParser, p.GetTokenStream(), 1, p.GetParserRuleContext()) {
+			switch p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 1, p.GetParserRuleContext()) {
 			case 1:
 				localctx = NewAndBooleanExpressionContext(p, NewBoolean_expressionContext(p, _parentctx, _parentState))
 				p.PushNewRecursionContext(localctx, _startState, unoParserRULE_boolean_expression)
 				p.SetState(33)
 
 				if !(p.Precpred(p.GetParserRuleContext(), 9)) {
-					p.SetError(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 9)", ""))
-					goto errorExit
+					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 9)", ""))
 				}
 				{
 					p.SetState(34)
 					p.Match(unoParserT_AND)
-					if p.HasError() {
-						// Recognition error - abort rule
-						goto errorExit
-					}
 				}
 				{
 					p.SetState(35)
@@ -1102,49 +1060,26 @@ func (p *unoParser) boolean_expression(_p int) (localctx IBoolean_expressionCont
 				p.SetState(36)
 
 				if !(p.Precpred(p.GetParserRuleContext(), 8)) {
-					p.SetError(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 8)", ""))
-					goto errorExit
+					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 8)", ""))
 				}
 				{
 					p.SetState(37)
 					p.Match(unoParserT_OR)
-					if p.HasError() {
-						// Recognition error - abort rule
-						goto errorExit
-					}
 				}
 				{
 					p.SetState(38)
 					p.boolean_expression(9)
 				}
 
-			case antlr.ATNInvalidAltNumber:
-				goto errorExit
 			}
 
 		}
 		p.SetState(43)
 		p.GetErrorHandler().Sync(p)
-		if p.HasError() {
-			goto errorExit
-		}
-		_alt = p.GetInterpreter().AdaptivePredict(p.BaseParser, p.GetTokenStream(), 2, p.GetParserRuleContext())
-		if p.HasError() {
-			goto errorExit
-		}
+		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 2, p.GetParserRuleContext())
 	}
 
-errorExit:
-	if p.HasError() {
-		v := p.GetError()
-		localctx.SetException(v)
-		p.GetErrorHandler().ReportError(p, v)
-		p.GetErrorHandler().Recover(p, v)
-		p.SetError(nil)
-	}
-	p.UnrollRecursionContexts(_parentctx)
 	return localctx
-	goto errorExit // Trick to prevent compiler error if the label is not used
 }
 
 // IArithmetic_expressionContext is an interface to support dynamic dispatch.
@@ -1158,20 +1093,15 @@ type IArithmetic_expressionContext interface {
 }
 
 type Arithmetic_expressionContext struct {
-	antlr.BaseParserRuleContext
+	*antlr.BaseParserRuleContext
 	parser antlr.Parser
 }
 
 func NewEmptyArithmetic_expressionContext() *Arithmetic_expressionContext {
 	var p = new(Arithmetic_expressionContext)
-	antlr.InitBaseParserRuleContext(&p.BaseParserRuleContext, nil, -1)
+	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(nil, -1)
 	p.RuleIndex = unoParserRULE_arithmetic_expression
 	return p
-}
-
-func InitEmptyArithmetic_expressionContext(p *Arithmetic_expressionContext) {
-	antlr.InitBaseParserRuleContext(&p.BaseParserRuleContext, nil, -1)
-	p.RuleIndex = unoParserRULE_arithmetic_expression
 }
 
 func (*Arithmetic_expressionContext) IsArithmetic_expressionContext() {}
@@ -1179,7 +1109,7 @@ func (*Arithmetic_expressionContext) IsArithmetic_expressionContext() {}
 func NewArithmetic_expressionContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *Arithmetic_expressionContext {
 	var p = new(Arithmetic_expressionContext)
 
-	antlr.InitBaseParserRuleContext(&p.BaseParserRuleContext, parent, invokingState)
+	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(parent, invokingState)
 
 	p.parser = parser
 	p.RuleIndex = unoParserRULE_arithmetic_expression
@@ -1189,8 +1119,8 @@ func NewArithmetic_expressionContext(parser antlr.Parser, parent antlr.ParserRul
 
 func (s *Arithmetic_expressionContext) GetParser() antlr.Parser { return s.parser }
 
-func (s *Arithmetic_expressionContext) CopyAll(ctx *Arithmetic_expressionContext) {
-	s.CopyFrom(&ctx.BaseParserRuleContext)
+func (s *Arithmetic_expressionContext) CopyFrom(ctx *Arithmetic_expressionContext) {
+	s.BaseParserRuleContext.CopyFrom(ctx.BaseParserRuleContext)
 }
 
 func (s *Arithmetic_expressionContext) GetRuleContext() antlr.RuleContext {
@@ -1202,15 +1132,15 @@ func (s *Arithmetic_expressionContext) ToStringTree(ruleNames []string, recog an
 }
 
 type PlainArithmeticExpressionContext struct {
-	Arithmetic_expressionContext
+	*Arithmetic_expressionContext
 }
 
 func NewPlainArithmeticExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *PlainArithmeticExpressionContext {
 	var p = new(PlainArithmeticExpressionContext)
 
-	InitEmptyArithmetic_expressionContext(&p.Arithmetic_expressionContext)
+	p.Arithmetic_expressionContext = NewEmptyArithmetic_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Arithmetic_expressionContext))
+	p.CopyFrom(ctx.(*Arithmetic_expressionContext))
 
 	return p
 }
@@ -1256,15 +1186,15 @@ func (s *PlainArithmeticExpressionContext) ExitRule(listener antlr.ParseTreeList
 }
 
 type AddArithmeticExpressionContext struct {
-	Arithmetic_expressionContext
+	*Arithmetic_expressionContext
 }
 
 func NewAddArithmeticExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *AddArithmeticExpressionContext {
 	var p = new(AddArithmeticExpressionContext)
 
-	InitEmptyArithmetic_expressionContext(&p.Arithmetic_expressionContext)
+	p.Arithmetic_expressionContext = NewEmptyArithmetic_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Arithmetic_expressionContext))
+	p.CopyFrom(ctx.(*Arithmetic_expressionContext))
 
 	return p
 }
@@ -1331,15 +1261,15 @@ func (s *AddArithmeticExpressionContext) ExitRule(listener antlr.ParseTreeListen
 }
 
 type ModArithmeticExpressionContext struct {
-	Arithmetic_expressionContext
+	*Arithmetic_expressionContext
 }
 
 func NewModArithmeticExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *ModArithmeticExpressionContext {
 	var p = new(ModArithmeticExpressionContext)
 
-	InitEmptyArithmetic_expressionContext(&p.Arithmetic_expressionContext)
+	p.Arithmetic_expressionContext = NewEmptyArithmetic_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Arithmetic_expressionContext))
+	p.CopyFrom(ctx.(*Arithmetic_expressionContext))
 
 	return p
 }
@@ -1406,15 +1336,15 @@ func (s *ModArithmeticExpressionContext) ExitRule(listener antlr.ParseTreeListen
 }
 
 type RuntTimeFuncArithmeticExpressionContext struct {
-	Arithmetic_expressionContext
+	*Arithmetic_expressionContext
 }
 
 func NewRuntTimeFuncArithmeticExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *RuntTimeFuncArithmeticExpressionContext {
 	var p = new(RuntTimeFuncArithmeticExpressionContext)
 
-	InitEmptyArithmetic_expressionContext(&p.Arithmetic_expressionContext)
+	p.Arithmetic_expressionContext = NewEmptyArithmetic_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Arithmetic_expressionContext))
+	p.CopyFrom(ctx.(*Arithmetic_expressionContext))
 
 	return p
 }
@@ -1448,15 +1378,15 @@ func (s *RuntTimeFuncArithmeticExpressionContext) ExitRule(listener antlr.ParseT
 }
 
 type StringArithmeticExpressionContext struct {
-	Arithmetic_expressionContext
+	*Arithmetic_expressionContext
 }
 
 func NewStringArithmeticExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *StringArithmeticExpressionContext {
 	var p = new(StringArithmeticExpressionContext)
 
-	InitEmptyArithmetic_expressionContext(&p.Arithmetic_expressionContext)
+	p.Arithmetic_expressionContext = NewEmptyArithmetic_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Arithmetic_expressionContext))
+	p.CopyFrom(ctx.(*Arithmetic_expressionContext))
 
 	return p
 }
@@ -1482,15 +1412,15 @@ func (s *StringArithmeticExpressionContext) ExitRule(listener antlr.ParseTreeLis
 }
 
 type IntegerArithmeticExpressionContext struct {
-	Arithmetic_expressionContext
+	*Arithmetic_expressionContext
 }
 
 func NewIntegerArithmeticExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *IntegerArithmeticExpressionContext {
 	var p = new(IntegerArithmeticExpressionContext)
 
-	InitEmptyArithmetic_expressionContext(&p.Arithmetic_expressionContext)
+	p.Arithmetic_expressionContext = NewEmptyArithmetic_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Arithmetic_expressionContext))
+	p.CopyFrom(ctx.(*Arithmetic_expressionContext))
 
 	return p
 }
@@ -1516,15 +1446,15 @@ func (s *IntegerArithmeticExpressionContext) ExitRule(listener antlr.ParseTreeLi
 }
 
 type DecimalArithmeticExpressionContext struct {
-	Arithmetic_expressionContext
+	*Arithmetic_expressionContext
 }
 
 func NewDecimalArithmeticExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *DecimalArithmeticExpressionContext {
 	var p = new(DecimalArithmeticExpressionContext)
 
-	InitEmptyArithmetic_expressionContext(&p.Arithmetic_expressionContext)
+	p.Arithmetic_expressionContext = NewEmptyArithmetic_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Arithmetic_expressionContext))
+	p.CopyFrom(ctx.(*Arithmetic_expressionContext))
 
 	return p
 }
@@ -1550,15 +1480,15 @@ func (s *DecimalArithmeticExpressionContext) ExitRule(listener antlr.ParseTreeLi
 }
 
 type FuncArithmeticExpressionContext struct {
-	Arithmetic_expressionContext
+	*Arithmetic_expressionContext
 }
 
 func NewFuncArithmeticExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *FuncArithmeticExpressionContext {
 	var p = new(FuncArithmeticExpressionContext)
 
-	InitEmptyArithmetic_expressionContext(&p.Arithmetic_expressionContext)
+	p.Arithmetic_expressionContext = NewEmptyArithmetic_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Arithmetic_expressionContext))
+	p.CopyFrom(ctx.(*Arithmetic_expressionContext))
 
 	return p
 }
@@ -1641,15 +1571,15 @@ func (s *FuncArithmeticExpressionContext) ExitRule(listener antlr.ParseTreeListe
 }
 
 type ColumnArithmeticExpressionContext struct {
-	Arithmetic_expressionContext
+	*Arithmetic_expressionContext
 }
 
 func NewColumnArithmeticExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *ColumnArithmeticExpressionContext {
 	var p = new(ColumnArithmeticExpressionContext)
 
-	InitEmptyArithmetic_expressionContext(&p.Arithmetic_expressionContext)
+	p.Arithmetic_expressionContext = NewEmptyArithmetic_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Arithmetic_expressionContext))
+	p.CopyFrom(ctx.(*Arithmetic_expressionContext))
 
 	return p
 }
@@ -1675,15 +1605,15 @@ func (s *ColumnArithmeticExpressionContext) ExitRule(listener antlr.ParseTreeLis
 }
 
 type DivArithmeticExpressionContext struct {
-	Arithmetic_expressionContext
+	*Arithmetic_expressionContext
 }
 
 func NewDivArithmeticExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *DivArithmeticExpressionContext {
 	var p = new(DivArithmeticExpressionContext)
 
-	InitEmptyArithmetic_expressionContext(&p.Arithmetic_expressionContext)
+	p.Arithmetic_expressionContext = NewEmptyArithmetic_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Arithmetic_expressionContext))
+	p.CopyFrom(ctx.(*Arithmetic_expressionContext))
 
 	return p
 }
@@ -1750,15 +1680,15 @@ func (s *DivArithmeticExpressionContext) ExitRule(listener antlr.ParseTreeListen
 }
 
 type MulArithmeticExpressionContext struct {
-	Arithmetic_expressionContext
+	*Arithmetic_expressionContext
 }
 
 func NewMulArithmeticExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *MulArithmeticExpressionContext {
 	var p = new(MulArithmeticExpressionContext)
 
-	InitEmptyArithmetic_expressionContext(&p.Arithmetic_expressionContext)
+	p.Arithmetic_expressionContext = NewEmptyArithmetic_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Arithmetic_expressionContext))
+	p.CopyFrom(ctx.(*Arithmetic_expressionContext))
 
 	return p
 }
@@ -1825,15 +1755,15 @@ func (s *MulArithmeticExpressionContext) ExitRule(listener antlr.ParseTreeListen
 }
 
 type SubArithmeticExpressionContext struct {
-	Arithmetic_expressionContext
+	*Arithmetic_expressionContext
 }
 
 func NewSubArithmeticExpressionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *SubArithmeticExpressionContext {
 	var p = new(SubArithmeticExpressionContext)
 
-	InitEmptyArithmetic_expressionContext(&p.Arithmetic_expressionContext)
+	p.Arithmetic_expressionContext = NewEmptyArithmetic_expressionContext()
 	p.parser = parser
-	p.CopyAll(ctx.(*Arithmetic_expressionContext))
+	p.CopyFrom(ctx.(*Arithmetic_expressionContext))
 
 	return p
 }
@@ -1904,8 +1834,10 @@ func (p *unoParser) Arithmetic_expression() (localctx IArithmetic_expressionCont
 }
 
 func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressionContext) {
-	var _parentctx antlr.ParserRuleContext = p.GetParserRuleContext()
+	this := p
+	_ = this
 
+	var _parentctx antlr.ParserRuleContext = p.GetParserRuleContext()
 	_parentState := p.GetState()
 	localctx = NewArithmetic_expressionContext(p, p.GetParserRuleContext(), _parentState)
 	var _prevctx IArithmetic_expressionContext = localctx
@@ -1914,16 +1846,28 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 	p.EnterRecursionRule(localctx, 4, unoParserRULE_arithmetic_expression, _p)
 	var _la int
 
+	defer func() {
+		p.UnrollRecursionContexts(_parentctx)
+	}()
+
+	defer func() {
+		if err := recover(); err != nil {
+			if v, ok := err.(antlr.RecognitionException); ok {
+				localctx.SetException(v)
+				p.GetErrorHandler().ReportError(p, v)
+				p.GetErrorHandler().Recover(p, v)
+			} else {
+				panic(err)
+			}
+		}
+	}()
+
 	var _alt int
 
 	p.EnterOuterAlt(localctx, 1)
 	p.SetState(68)
 	p.GetErrorHandler().Sync(p)
-	if p.HasError() {
-		goto errorExit
-	}
-
-	switch p.GetInterpreter().AdaptivePredict(p.BaseParser, p.GetTokenStream(), 4, p.GetParserRuleContext()) {
+	switch p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 4, p.GetParserRuleContext()) {
 	case 1:
 		localctx = NewRuntTimeFuncArithmeticExpressionContext(p, localctx)
 		p.SetParserRuleContext(localctx)
@@ -1932,26 +1876,14 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 		{
 			p.SetState(45)
 			p.Match(unoParserIDENTIFIER)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 		{
 			p.SetState(46)
 			p.Match(unoParserBRACKET_OPEN)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 		{
 			p.SetState(47)
 			p.Match(unoParserBRACKET_CLOSE)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 
 	case 2:
@@ -1961,18 +1893,10 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 		{
 			p.SetState(48)
 			p.Match(unoParserIDENTIFIER)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 		{
 			p.SetState(49)
 			p.Match(unoParserBRACKET_OPEN)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 		{
 			p.SetState(50)
@@ -1980,19 +1904,12 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 		}
 		p.SetState(55)
 		p.GetErrorHandler().Sync(p)
-		if p.HasError() {
-			goto errorExit
-		}
 		_la = p.GetTokenStream().LA(1)
 
 		for _la == unoParserCOMMA {
 			{
 				p.SetState(51)
 				p.Match(unoParserCOMMA)
-				if p.HasError() {
-					// Recognition error - abort rule
-					goto errorExit
-				}
 			}
 			{
 				p.SetState(52)
@@ -2001,18 +1918,11 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 
 			p.SetState(57)
 			p.GetErrorHandler().Sync(p)
-			if p.HasError() {
-				goto errorExit
-			}
 			_la = p.GetTokenStream().LA(1)
 		}
 		{
 			p.SetState(58)
 			p.Match(unoParserBRACKET_CLOSE)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 
 	case 3:
@@ -2022,10 +1932,6 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 		{
 			p.SetState(60)
 			p.Match(unoParserIDENTIFIER)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 
 	case 4:
@@ -2035,10 +1941,6 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 		{
 			p.SetState(61)
 			p.Match(unoParserSTRING)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 
 	case 5:
@@ -2048,10 +1950,6 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 		{
 			p.SetState(62)
 			p.Match(unoParserINTEGER)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 
 	case 6:
@@ -2061,10 +1959,6 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 		{
 			p.SetState(63)
 			p.Match(unoParserDECIMAL)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 
 	case 7:
@@ -2074,10 +1968,6 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 		{
 			p.SetState(64)
 			p.Match(unoParserBRACKET_OPEN)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 		{
 			p.SetState(65)
@@ -2086,25 +1976,14 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 		{
 			p.SetState(66)
 			p.Match(unoParserBRACKET_CLOSE)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
-			}
 		}
 
-	case antlr.ATNInvalidAltNumber:
-		goto errorExit
 	}
 	p.GetParserRuleContext().SetStop(p.GetTokenStream().LT(-1))
 	p.SetState(87)
 	p.GetErrorHandler().Sync(p)
-	if p.HasError() {
-		goto errorExit
-	}
-	_alt = p.GetInterpreter().AdaptivePredict(p.BaseParser, p.GetTokenStream(), 6, p.GetParserRuleContext())
-	if p.HasError() {
-		goto errorExit
-	}
+	_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 6, p.GetParserRuleContext())
+
 	for _alt != 2 && _alt != antlr.ATNInvalidAltNumber {
 		if _alt == 1 {
 			if p.GetParseListeners() != nil {
@@ -2113,27 +1992,18 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 			_prevctx = localctx
 			p.SetState(85)
 			p.GetErrorHandler().Sync(p)
-			if p.HasError() {
-				goto errorExit
-			}
-
-			switch p.GetInterpreter().AdaptivePredict(p.BaseParser, p.GetTokenStream(), 5, p.GetParserRuleContext()) {
+			switch p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 5, p.GetParserRuleContext()) {
 			case 1:
 				localctx = NewModArithmeticExpressionContext(p, NewArithmetic_expressionContext(p, _parentctx, _parentState))
 				p.PushNewRecursionContext(localctx, _startState, unoParserRULE_arithmetic_expression)
 				p.SetState(70)
 
 				if !(p.Precpred(p.GetParserRuleContext(), 12)) {
-					p.SetError(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 12)", ""))
-					goto errorExit
+					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 12)", ""))
 				}
 				{
 					p.SetState(71)
 					p.Match(unoParserT_MOD)
-					if p.HasError() {
-						// Recognition error - abort rule
-						goto errorExit
-					}
 				}
 				{
 					p.SetState(72)
@@ -2146,16 +2016,11 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 				p.SetState(73)
 
 				if !(p.Precpred(p.GetParserRuleContext(), 11)) {
-					p.SetError(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 11)", ""))
-					goto errorExit
+					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 11)", ""))
 				}
 				{
 					p.SetState(74)
 					p.Match(unoParserT_MUL)
-					if p.HasError() {
-						// Recognition error - abort rule
-						goto errorExit
-					}
 				}
 				{
 					p.SetState(75)
@@ -2168,16 +2033,11 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 				p.SetState(76)
 
 				if !(p.Precpred(p.GetParserRuleContext(), 10)) {
-					p.SetError(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 10)", ""))
-					goto errorExit
+					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 10)", ""))
 				}
 				{
 					p.SetState(77)
 					p.Match(unoParserT_DIV)
-					if p.HasError() {
-						// Recognition error - abort rule
-						goto errorExit
-					}
 				}
 				{
 					p.SetState(78)
@@ -2190,16 +2050,11 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 				p.SetState(79)
 
 				if !(p.Precpred(p.GetParserRuleContext(), 9)) {
-					p.SetError(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 9)", ""))
-					goto errorExit
+					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 9)", ""))
 				}
 				{
 					p.SetState(80)
 					p.Match(unoParserT_ADD)
-					if p.HasError() {
-						// Recognition error - abort rule
-						goto errorExit
-					}
 				}
 				{
 					p.SetState(81)
@@ -2212,49 +2067,26 @@ func (p *unoParser) arithmetic_expression(_p int) (localctx IArithmetic_expressi
 				p.SetState(82)
 
 				if !(p.Precpred(p.GetParserRuleContext(), 8)) {
-					p.SetError(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 8)", ""))
-					goto errorExit
+					panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 8)", ""))
 				}
 				{
 					p.SetState(83)
 					p.Match(unoParserT_SUB)
-					if p.HasError() {
-						// Recognition error - abort rule
-						goto errorExit
-					}
 				}
 				{
 					p.SetState(84)
 					p.arithmetic_expression(9)
 				}
 
-			case antlr.ATNInvalidAltNumber:
-				goto errorExit
 			}
 
 		}
 		p.SetState(89)
 		p.GetErrorHandler().Sync(p)
-		if p.HasError() {
-			goto errorExit
-		}
-		_alt = p.GetInterpreter().AdaptivePredict(p.BaseParser, p.GetTokenStream(), 6, p.GetParserRuleContext())
-		if p.HasError() {
-			goto errorExit
-		}
+		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 6, p.GetParserRuleContext())
 	}
 
-errorExit:
-	if p.HasError() {
-		v := p.GetError()
-		localctx.SetException(v)
-		p.GetErrorHandler().ReportError(p, v)
-		p.GetErrorHandler().Recover(p, v)
-		p.SetError(nil)
-	}
-	p.UnrollRecursionContexts(_parentctx)
 	return localctx
-	goto errorExit // Trick to prevent compiler error if the label is not used
 }
 
 func (p *unoParser) Sempred(localctx antlr.RuleContext, ruleIndex, predIndex int) bool {
@@ -2279,6 +2111,9 @@ func (p *unoParser) Sempred(localctx antlr.RuleContext, ruleIndex, predIndex int
 }
 
 func (p *unoParser) Boolean_expression_Sempred(localctx antlr.RuleContext, predIndex int) bool {
+	this := p
+	_ = this
+
 	switch predIndex {
 	case 0:
 		return p.Precpred(p.GetParserRuleContext(), 9)
@@ -2292,6 +2127,9 @@ func (p *unoParser) Boolean_expression_Sempred(localctx antlr.RuleContext, predI
 }
 
 func (p *unoParser) Arithmetic_expression_Sempred(localctx antlr.RuleContext, predIndex int) bool {
+	this := p
+	_ = this
+
 	switch predIndex {
 	case 2:
 		return p.Precpred(p.GetParserRuleContext(), 12)

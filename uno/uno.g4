@@ -1,4 +1,6 @@
-// antlr4 -Dlanguage=Go uno.g4 -package uno
+// alias antlr='java -jar $PWD/antlr-4.12.0-complete.jar'
+// antlr -Dlanguage=Go uno.g4 -package uno
+
 grammar uno;
 options { caseInsensitive=true; }
 

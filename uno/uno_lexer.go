@@ -1,12 +1,13 @@
-// Code generated from uno.g4 by ANTLR 4.13.2. DO NOT EDIT.
+// Code generated from uno.g4 by ANTLR 4.12.0. DO NOT EDIT.
 
 package uno
 
 import (
 	"fmt"
-	"github.com/antlr4-go/antlr/v4"
 	"sync"
 	"unicode"
+
+	"github.com/antlr/antlr4/runtime/Go/antlr/v4"
 )
 
 // Suppress unused import error
@@ -21,34 +22,34 @@ type unoLexer struct {
 	// TODO: EOF string
 }
 
-var UnoLexerLexerStaticData struct {
+var unolexerLexerStaticData struct {
 	once                   sync.Once
 	serializedATN          []int32
-	ChannelNames           []string
-	ModeNames              []string
-	LiteralNames           []string
-	SymbolicNames          []string
-	RuleNames              []string
-	PredictionContextCache *antlr.PredictionContextCache
+	channelNames           []string
+	modeNames              []string
+	literalNames           []string
+	symbolicNames          []string
+	ruleNames              []string
+	predictionContextCache *antlr.PredictionContextCache
 	atn                    *antlr.ATN
 	decisionToDFA          []*antlr.DFA
 }
 
 func unolexerLexerInit() {
-	staticData := &UnoLexerLexerStaticData
-	staticData.ChannelNames = []string{
+	staticData := &unolexerLexerStaticData
+	staticData.channelNames = []string{
 		"DEFAULT_TOKEN_CHANNEL", "HIDDEN",
 	}
-	staticData.ModeNames = []string{
+	staticData.modeNames = []string{
 		"DEFAULT_MODE",
 	}
-	staticData.LiteralNames = []string{
+	staticData.literalNames = []string{
 		"", "'('", "')'", "'['", "']'", "'.'", "','", "'\"'", "'+'", "'-'",
 		"'*'", "'/'", "'%'", "'on'", "'and'", "'or'", "'not'", "'in'", "'true'",
 		"'false'", "", "'='", "'=='", "'<>'", "'!='", "'>'", "'>='", "'<'",
 		"'<='",
 	}
-	staticData.SymbolicNames = []string{
+	staticData.symbolicNames = []string{
 		"", "BRACKET_OPEN", "BRACKET_CLOSE", "SQUARE_OPEN", "SQUARE_CLOSE",
 		"DOT", "COMMA", "QUOTA", "T_ADD", "T_SUB", "T_MUL", "T_DIV", "T_MOD",
 		"T_ON", "T_AND", "T_OR", "T_NOT", "T_IN", "T_TRUE", "T_FALSE", "T_COMPARE",
@@ -56,7 +57,7 @@ func unolexerLexerInit() {
 		"T_LESS", "T_LESSEQUAL", "IDENTIFIER", "INTEGER_LIST", "INTEGER", "DECIMAL_LIST",
 		"DECIMAL", "STRING_LIST", "STRING", "WS",
 	}
-	staticData.RuleNames = []string{
+	staticData.ruleNames = []string{
 		"BRACKET_OPEN", "BRACKET_CLOSE", "SQUARE_OPEN", "SQUARE_CLOSE", "DOT",
 		"COMMA", "QUOTA", "T_ADD", "T_SUB", "T_MUL", "T_DIV", "T_MOD", "T_ON",
 		"T_AND", "T_OR", "T_NOT", "T_IN", "T_TRUE", "T_FALSE", "T_COMPARE",
@@ -65,7 +66,7 @@ func unolexerLexerInit() {
 		"DECIMAL", "STRING_LIST", "STRING", "ESC", "UNICODE", "HEX", "SAFECODEPOINT",
 		"WS",
 	}
-	staticData.PredictionContextCache = antlr.NewPredictionContextCache()
+	staticData.predictionContextCache = antlr.NewPredictionContextCache()
 	staticData.serializedATN = []int32{
 		4, 0, 36, 272, 6, -1, 2, 0, 7, 0, 2, 1, 7, 1, 2, 2, 7, 2, 2, 3, 7, 3, 2,
 		4, 7, 4, 2, 5, 7, 5, 2, 6, 7, 6, 2, 7, 7, 7, 2, 8, 7, 8, 2, 9, 7, 9, 2,
@@ -211,7 +212,7 @@ func unolexerLexerInit() {
 // NewunoLexer(). You can call this function if you wish to initialize the static state ahead
 // of time.
 func UnoLexerInit() {
-	staticData := &UnoLexerLexerStaticData
+	staticData := &unolexerLexerStaticData
 	staticData.once.Do(unolexerLexerInit)
 }
 
@@ -220,13 +221,13 @@ func NewunoLexer(input antlr.CharStream) *unoLexer {
 	UnoLexerInit()
 	l := new(unoLexer)
 	l.BaseLexer = antlr.NewBaseLexer(input)
-	staticData := &UnoLexerLexerStaticData
-	l.Interpreter = antlr.NewLexerATNSimulator(l, staticData.atn, staticData.decisionToDFA, staticData.PredictionContextCache)
-	l.channelNames = staticData.ChannelNames
-	l.modeNames = staticData.ModeNames
-	l.RuleNames = staticData.RuleNames
-	l.LiteralNames = staticData.LiteralNames
-	l.SymbolicNames = staticData.SymbolicNames
+	staticData := &unolexerLexerStaticData
+	l.Interpreter = antlr.NewLexerATNSimulator(l, staticData.atn, staticData.decisionToDFA, staticData.predictionContextCache)
+	l.channelNames = staticData.channelNames
+	l.modeNames = staticData.modeNames
+	l.RuleNames = staticData.ruleNames
+	l.LiteralNames = staticData.literalNames
+	l.SymbolicNames = staticData.symbolicNames
 	l.GrammarFileName = "uno.g4"
 	// TODO: l.EOF = antlr.TokenEOF
 

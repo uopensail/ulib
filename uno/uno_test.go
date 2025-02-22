@@ -8,42 +8,46 @@ import (
 )
 
 func TestIn(t *testing.T) {
+	types := map[string]sample.DataType{
+		"cat1":         sample.Int64Type,
+		"d_s_language": sample.StringType,
+	}
 	{
-		condition := `cat1[int64] in (12,1,3)`
-		instance, err := NewEvaluator(condition)
+		condition := `cat1 in (12,1,3)`
+		instance, err := NewEvaluator(condition, types)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			return
 		}
 		slice := instance.Allocate()
 
-		err = instance.FillInt64("", "cat1", 1, slice)
+		err = instance.FillInt64("cat1", 1, slice)
 		if instance.Eval(slice) != 1 {
 			t.FailNow()
 		}
 
 		slice = instance.Allocate()
-		err = instance.FillInt64("", "cat1", 2, slice)
+		err = instance.FillInt64("cat1", 2, slice)
 		if instance.Eval(slice) != 0 {
 			t.FailNow()
 		}
 	}
 	{
-		condition := `d_s_language[string] IN ("en","fr","jp")`
-		instance, err := NewEvaluator(condition)
+		condition := `d_s_language IN ("en","fr","jp")`
+		instance, err := NewEvaluator(condition, types)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			return
 		}
 		slice := instance.Allocate()
 
-		err = instance.FillString("", "d_s_language", "xx", slice)
+		err = instance.FillString("d_s_language", "xx", slice)
 		if instance.Eval(slice) != 0 {
 			t.FailNow()
 		}
 
 		slice = instance.Allocate()
-		err = instance.FillString("", "d_s_language", "fr", slice)
+		err = instance.FillString("d_s_language", "fr", slice)
 		if instance.Eval(slice) != 1 {
 			t.FailNow()
 		}
@@ -52,9 +56,13 @@ func TestIn(t *testing.T) {
 }
 
 func Test_Fill(t *testing.T) {
+	types := map[string]sample.DataType{
+		"d_s_language": sample.StringType,
+		"u_s_language": sample.StringType,
+	}
 	{
-		condition := `table_a.d_s_language[string] = user.u_s_language[string]`
-		instance, err := NewEvaluator(condition)
+		condition := `d_s_language = u_s_language`
+		instance, err := NewEvaluator(condition, types)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			return
@@ -63,26 +71,28 @@ func Test_Fill(t *testing.T) {
 		dFeat.Set("d_s_language", &sample.String{Value: "en"})
 
 		slice := instance.Allocate()
-		instance.Fill("table_a", dFeat, slice)
+		instance.Fill(dFeat, slice)
 		uFeat := sample.NewMutableFeatures()
 		uFeat.Set("u_s_language", &sample.String{Value: "fr"})
-		instance.Fill("user", uFeat, slice)
+		instance.Fill(uFeat, slice)
 		if instance.Eval(slice) != 0 {
 			t.FailNow()
 		}
 
 		uFeat.Set("u_s_language", &sample.String{Value: "en"})
-		instance.Fill("user", uFeat, slice)
+		instance.Fill(uFeat, slice)
 		if instance.Eval(slice) != 1 {
 			t.FailNow()
 		}
-
 	}
 }
 
 func TestEval(t *testing.T) {
-	condition := `v[float32] > 1000.0+1.5+2.9`
-	instance, err := NewEvaluator(condition)
+	types := map[string]sample.DataType{
+		"v": sample.Float32Type,
+	}
+	condition := `v > 1000.0+1.5+2.9`
+	instance, err := NewEvaluator(condition, types)
 	if err != nil {
 		fmt.Printf("%v\n", err)
 		return
@@ -90,7 +100,7 @@ func TestEval(t *testing.T) {
 	slice := instance.Allocate()
 
 	fmt.Printf("%v\n", slice)
-	err = instance.FillFloat32("", "v", float32(1001), slice)
+	err = instance.FillFloat32("v", float32(1001), slice)
 	fmt.Printf("%v\n", err)
 
 	fmt.Printf("%v\n", slice)
@@ -99,7 +109,7 @@ func TestEval(t *testing.T) {
 	}
 	slice = instance.Allocate()
 
-	err = instance.FillFloat32("", "v", float32(2001), slice)
+	err = instance.FillFloat32("v", float32(2001), slice)
 
 	if instance.Eval(slice) != 1 {
 		t.FailNow()

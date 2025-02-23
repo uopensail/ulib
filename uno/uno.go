@@ -90,7 +90,7 @@ func (e *Evaluator) Fill(features sample.Features, value []unsafe.Pointer) {
 	}
 }
 
-func FillColumnUnChecked[T int64 | float32 | string | []int64](e *Evaluator, col string, data T, value []unsafe.Pointer) error {
+func FillColumnUnSafe[T int64 | float32 | string | []int64 | []float32 | []string](e *Evaluator, col string, data T, value []unsafe.Pointer) error {
 	column, ok := e.columns[col]
 	if !ok {
 		return fmt.Errorf("column %s not found", col)

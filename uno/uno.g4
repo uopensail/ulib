@@ -10,8 +10,8 @@ boolean_expression      : boolean_expression T_AND boolean_expression           
                         | boolean_expression T_OR boolean_expression                                        # OrBooleanExpression
                         | arithmetic_expression T_COMPARE arithmetic_expression                             # CmpBooleanExpression
                         | T_NOT boolean_expression                                                          # NotBooleanExpression
-                        | arithmetic_expression T_IN (INTEGER_LIST|STRING_LIST|DECIMAL_LIST)                # InBooleanExpression
-                        | arithmetic_expression T_NOT T_IN (INTEGER_LIST|STRING_LIST|DECIMAL_LIST)          # NotInBooleanExpression
+                        | arithmetic_expression T_IN (INTEGER_LIST|STRING_LIST)                             # InBooleanExpression
+                        | arithmetic_expression T_NOT T_IN (INTEGER_LIST|STRING_LIST)                       # NotInBooleanExpression
                         | BRACKET_OPEN boolean_expression BRACKET_CLOSE                                     # PlainBooleanExpression
                         | T_TRUE                                                                            # TrueBooleanExpression
                         | T_FALSE                                                                           # FalseBooleanExpression

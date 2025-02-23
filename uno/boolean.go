@@ -314,12 +314,25 @@ func (i *In) Simplify() BooleanExpression {
 	if i.dtype == sample.Int64Type {
 		status := inarray[int64](i.left.(*Int64).value, i.right.(*Int64s).value)
 		return &Literal{value: status}
-	} else if i.dtype == sample.Float32Type {
-		status := inarray[float32](i.left.(*Float32).value, i.right.(*Float32s).value)
-		return &Literal{value: status}
+	} else if i.dtype == sample.Int64sType {
+		list := i.left.(*Int64s).value
+		for j := 0; j < len(list); j++ {
+			if inarray[int64](list[j], i.right.(*Int64s).value) {
+				return &Literal{value: true}
+			}
+		}
+		return &Literal{value: false}
 	} else if i.dtype == sample.StringType {
 		status := inarray[string](i.left.(*String).value, i.right.(*Strings).value)
 		return &Literal{value: status}
+	} else if i.dtype == sample.StringsType {
+		list := i.left.(*Strings).value
+		for j := 0; j < len(list); j++ {
+			if inarray[string](list[j], i.right.(*Strings).value) {
+				return &Literal{value: true}
+			}
+		}
+		return &Literal{value: false}
 	}
 	panic(fmt.Sprintf("data type:%d not supported", i.dtype))
 }
@@ -386,12 +399,25 @@ func (i *NotIn) Simplify() BooleanExpression {
 	if i.dtype == sample.Int64Type {
 		status := inarray[int64](i.left.(*Int64).value, i.right.(*Int64s).value)
 		return &Literal{value: !status}
-	} else if i.dtype == sample.Float32Type {
-		status := inarray[float32](i.left.(*Float32).value, i.right.(*Float32s).value)
-		return &Literal{value: !status}
+	} else if i.dtype == sample.Int64sType {
+		list := i.left.(*Int64s).value
+		for j := 0; j < len(list); j++ {
+			if inarray[int64](list[j], i.right.(*Int64s).value) {
+				return &Literal{value: false}
+			}
+		}
+		return &Literal{value: true}
 	} else if i.dtype == sample.StringType {
 		status := inarray[string](i.left.(*String).value, i.right.(*Strings).value)
 		return &Literal{value: !status}
+	} else if i.dtype == sample.StringsType {
+		list := i.left.(*Strings).value
+		for j := 0; j < len(list); j++ {
+			if inarray[string](list[j], i.right.(*Strings).value) {
+				return &Literal{value: false}
+			}
+		}
+		return &Literal{value: true}
 	}
 	panic(fmt.Sprintf("data type:%d not supported", i.dtype))
 }
@@ -429,7 +455,7 @@ func (i *NotIn) ToList() []Expression {
 	return exprs
 }
 
-func inarray[T int64 | float32 | string](a T, array []T) bool {
+func inarray[T int64 | string](a T, array []T) bool {
 	for i := 0; i < len(array); i++ {
 		if a == array[i] {
 			return true

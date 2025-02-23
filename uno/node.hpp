@@ -420,10 +420,34 @@ static bool InSlice(T &v, Slice<T> &slice) {
 }
 
 template <typename T>
+static bool InSlice(Slice<T> &v, Slice<T> &slice) {
+  for (size_t j = 0; j < v.size(); j++) {
+    for (size_t i = 0; i < slice.size(); i++) {
+      if (v[j] == slice[i]) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+template <typename T>
 static bool NotInSlice(T &v, Slice<T> &slice) {
   for (size_t i = 0; i < slice.size(); i++) {
     if (v == slice[i]) {
       return false;
+    }
+  }
+  return true;
+}
+
+template <typename T>
+static bool NotInSlice(Slice<T> &v, Slice<T> &slice) {
+  for (size_t j = 0; j < v.size(); j++) {
+    for (size_t i = 0; i < slice.size(); i++) {
+      if (v[j] == slice[i]) {
+        return false;
+      }
     }
   }
   return true;
@@ -458,14 +482,19 @@ struct InNode : Node {
       *ret = InSlice<int64_t>(*static_cast<int64_t *>(lv),
                               *static_cast<Int64Slice *>(rv));
       (*vars)[id] = ret;
-    } else if (dtype == DataType::kFloat32) {
-      bool *ret = (bool *)malloc(sizeof(bool));
-      *ret = InSlice<float>(*static_cast<float *>(lv),
-                            *static_cast<Float32Slice *>((*vars)[right]));
-      (*vars)[id] = ret;
     } else if (dtype == DataType::kString) {
       bool *ret = (bool *)malloc(sizeof(bool));
       *ret = InSlice<GoString>(*static_cast<GoString *>((*vars)[left]),
+                               *static_cast<StringSlice *>((*vars)[right]));
+      (*vars)[id] = ret;
+    } else if (dtype == DataType::kInt64s) {
+      bool *ret = (bool *)malloc(sizeof(bool));
+      *ret = InSlice<int64_t>(*static_cast<Int64Slice *>((*vars)[left]),
+                              *static_cast<Int64Slice *>((*vars)[right]));
+      (*vars)[id] = ret;
+    } else if (dtype == DataType::kStrings) {
+      bool *ret = (bool *)malloc(sizeof(bool));
+      *ret = InSlice<GoString>(*static_cast<StringSlice *>((*vars)[left]),
                                *static_cast<StringSlice *>((*vars)[right]));
       (*vars)[id] = ret;
     }
@@ -494,14 +523,20 @@ struct NotInNode : Node {
       *ret = NotInSlice<int64_t>(*static_cast<int64_t *>((*vars)[left]),
                                  *static_cast<Int64Slice *>((*vars)[right]));
       (*vars)[id] = ret;
-    } else if (dtype == DataType::kFloat32) {
+    } else if (dtype == DataType::kInt64s) {
       bool *ret = (bool *)malloc(sizeof(bool));
-      *ret = NotInSlice<float>(*static_cast<float *>((*vars)[left]),
-                               *static_cast<Float32Slice *>((*vars)[right]));
+
+      *ret = NotInSlice<int64_t>(*static_cast<Int64Slice *>((*vars)[left]),
+                                 *static_cast<Int64Slice *>((*vars)[right]));
       (*vars)[id] = ret;
     } else if (dtype == DataType::kString) {
       bool *ret = (bool *)malloc(sizeof(bool));
       *ret = NotInSlice<GoString>(*static_cast<GoString *>((*vars)[left]),
+                                  *static_cast<StringSlice *>((*vars)[right]));
+      (*vars)[id] = ret;
+    } else if (dtype == DataType::kStrings) {
+      bool *ret = (bool *)malloc(sizeof(bool));
+      *ret = NotInSlice<GoString>(*static_cast<StringSlice *>((*vars)[left]),
                                   *static_cast<StringSlice *>((*vars)[right]));
       (*vars)[id] = ret;
     }

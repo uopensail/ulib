@@ -33,11 +33,34 @@ func (s *Listener) SyntaxError(recognizer antlr.Recognizer, offendingSymbol inte
 func (s *Listener) ExitCmpBooleanExpression(ctx *CmpBooleanExpressionContext) {
 	right := s.arithmetics.Pop()
 	left := s.arithmetics.Pop()
-	if left.GetDataType() != right.GetDataType() {
+
+	// support integer cast to float
+	var leftExpr ArithmeticExpression
+	var rightExpr ArithmeticExpression
+
+	leftType := left.GetDataType()
+	rightType := right.GetDataType()
+	dtype := sample.ErrorType
+	if leftType == sample.Float32Type && rightType == sample.Float32Type {
+		leftExpr, rightExpr, dtype = left, right, sample.Float32Type
+	} else if leftType == sample.Float32Type && rightType == sample.Int64Type {
+		leftExpr, rightExpr, dtype = left, &Function{
+			function: "casti2f",
+			args:     []ArithmeticExpression{right},
+		}, sample.Float32Type
+	} else if leftType == sample.Int64Type && rightType == sample.Int64Type {
+		leftExpr, rightExpr = left, right
+	} else if leftType == sample.Int64Type && rightType == sample.Float32Type {
+		leftExpr, rightExpr, dtype = &Function{
+			function: "casti2f",
+			args:     []ArithmeticExpression{left},
+		}, right, sample.Float32Type
+	} else if leftType == sample.StringType && rightType == sample.StringType {
+		leftExpr, rightExpr, dtype = left, right, sample.StringType
+	} else {
 		panic("DataType Mismatch")
 	}
 
-	dtype := left.GetDataType()
 	mark := ctx.T_COMPARE().GetText()
 	op := kErrorCType
 	if mark == "==" || mark == "=" {
@@ -52,8 +75,10 @@ func (s *Listener) ExitCmpBooleanExpression(ctx *CmpBooleanExpressionContext) {
 		op = kGreaterThanEqual
 	} else if mark == ">" {
 		op = kGreaterThan
+	} else {
+		panic(fmt.Sprintf("%s not a valid operation", mark))
 	}
-	tmp := &Cmp{left: left, right: right, op: op, dtype: dtype}
+	tmp := &Cmp{left: leftExpr, right: rightExpr, op: op, dtype: dtype}
 	s.booleans.Push(tmp)
 }
 
@@ -88,24 +113,17 @@ func (s *Listener) ExitAndBooleanExpression(ctx *AndBooleanExpressionContext) {
 // ExitNotInBooleanExpression is called when production NotInBooleanExpression is exited.
 func (s *Listener) ExitNotInBooleanExpression(ctx *NotInBooleanExpressionContext) {
 	expr := s.arithmetics.Pop()
-
-	if ctx.DECIMAL_LIST() != nil {
-		list := s.parseDecimalList(ctx.DECIMAL_LIST().GetText())
-		array := &Float32s{value: list}
-		if expr.GetDataType() != sample.Float32Type {
-			panic("DataType Mismatch")
-		}
-		s.booleans.Push(&NotIn{left: expr, right: array, dtype: sample.Float32Type})
-	} else if ctx.INTEGER_LIST() != nil {
-		if expr.GetDataType() != sample.Int64Type {
+	exprType := expr.GetDataType()
+	if ctx.INTEGER_LIST() != nil {
+		if exprType != sample.Int64Type && exprType != sample.Int64sType {
 			panic("DataType Mismatch")
 		}
 		list := s.parseIntegerList(ctx.INTEGER_LIST().GetText())
 		array := &Int64s{value: list}
 		s.booleans.Push(&NotIn{left: expr, right: array, dtype: sample.Int64Type})
 	} else {
-		if expr.GetDataType() != sample.StringType {
-			panic("DataType MisMatch")
+		if exprType != sample.StringType && exprType != sample.StringsType {
+			panic("DataType Mismatch")
 		}
 		list := s.parseStringList(ctx.STRING_LIST().GetText())
 		array := &Strings{value: list}
@@ -121,23 +139,16 @@ func (s *Listener) ExitFalseBooleanExpression(ctx *FalseBooleanExpressionContext
 // ExitInBooleanExpression is called when production InBooleanExpression is exited.
 func (s *Listener) ExitInBooleanExpression(ctx *InBooleanExpressionContext) {
 	expr := s.arithmetics.Pop()
-
-	if ctx.DECIMAL_LIST() != nil {
-		if expr.GetDataType() != sample.Float32Type {
-			panic("DataType Mismatch")
-		}
-		list := s.parseDecimalList(ctx.DECIMAL_LIST().GetText())
-		array := &Float32s{value: list}
-		s.booleans.Push(&In{left: expr, right: array, dtype: sample.Float32Type})
-	} else if ctx.INTEGER_LIST() != nil {
-		if expr.GetDataType() != sample.Int64Type {
+	exprType := expr.GetDataType()
+	if ctx.INTEGER_LIST() != nil {
+		if exprType != sample.Int64Type && exprType != sample.Int64sType {
 			panic("DataType Mismatch")
 		}
 		list := s.parseIntegerList(ctx.INTEGER_LIST().GetText())
 		array := &Int64s{value: list}
 		s.booleans.Push(&In{left: expr, right: array, dtype: sample.Int64Type})
 	} else {
-		if expr.GetDataType() != sample.StringType {
+		if exprType != sample.StringType && exprType != sample.StringsType {
 			panic("DataType Mismatch")
 		}
 		list := s.parseStringList(ctx.STRING_LIST().GetText())
@@ -150,17 +161,34 @@ func (s *Listener) ExitInBooleanExpression(ctx *InBooleanExpressionContext) {
 func (s *Listener) ExitAddArithmeticExpression(ctx *AddArithmeticExpressionContext) {
 	second := s.arithmetics.Pop()
 	first := s.arithmetics.Pop()
-
-	if first.GetDataType() != second.GetDataType() {
-		panic("DataType Mismatch")
-	}
-
 	function := "addf"
-	if first.GetDataType() == sample.Int64Type {
-		function = "addi"
+	firstType := first.GetDataType()
+	secondType := second.GetDataType()
+
+	var firstExpr ArithmeticExpression
+	var secondExpr ArithmeticExpression
+	if firstType == sample.Int64Type && secondType == sample.Int64Type {
+		function, firstExpr, secondExpr = "addi", first, second
+	} else if firstType == sample.Int64Type && secondType == sample.Float32Type {
+		function, firstExpr, secondExpr = "addf", &Function{
+			function: "casti2f",
+			args:     []ArithmeticExpression{first},
+		}, second
+	} else if firstType == sample.Float32Type && secondType == sample.Int64Type {
+		function, firstExpr, secondExpr = "addf", first, &Function{
+			function: "casti2f",
+			args:     []ArithmeticExpression{second},
+		}
+	} else if firstType == sample.Float32Type && secondType == sample.Float32Type {
+		function, firstExpr, secondExpr = "addf", first, second
+	} else {
+		panic("DataType Not supported")
 	}
 
-	tmp := &Function{function: function, args: []ArithmeticExpression{first, second}}
+	tmp := &Function{
+		function: function,
+		args:     []ArithmeticExpression{firstExpr, secondExpr},
+	}
 	tmp.check()
 	s.arithmetics.Push(tmp)
 }
@@ -206,12 +234,12 @@ func (s *Listener) ExitFuncArithmeticExpression(ctx *FuncArithmeticExpressionCon
 // ExitColumnArithmeticExpression is called when production ColumnArithmeticExpression is exited.
 func (s *Listener) ExitColumnArithmeticExpression(ctx *ColumnArithmeticExpressionContext) {
 	column := ctx.IDENTIFIER().GetText()
-	// default dtype is error
 	var dtype sample.DataType
 	var ok bool
 	if dtype, ok = s.types[column]; !ok {
-		dtype = sample.ErrorType
+		panic(fmt.Sprintf("column:%s not found", column))
 	}
+
 	tmp := &Variable{value: column, dtype: dtype}
 	s.arithmetics.Push(tmp)
 }
@@ -220,29 +248,34 @@ func (s *Listener) ExitColumnArithmeticExpression(ctx *ColumnArithmeticExpressio
 func (s *Listener) ExitDivArithmeticExpression(ctx *DivArithmeticExpressionContext) {
 	second := s.arithmetics.Pop()
 	first := s.arithmetics.Pop()
-
-	if first.GetDataType() != second.GetDataType() {
-		panic("DataType Mismatch")
-	}
-
 	function := "divf"
-	if first.GetDataType() == sample.Int64Type {
-		function = "divi"
-	}
-	if second.Trivial() {
-		second = second.Simplify()
-		if second.GetDataType() == sample.Float32Type {
-			if second.(*Float32).value == 0.0 {
-				panic("Devide By Zero")
-			}
-		} else if second.GetDataType() == sample.Int64Type {
-			if second.(*Int64).value == 0 {
-				panic("Devide By Zero")
-			}
+	firstType := first.GetDataType()
+	secondType := second.GetDataType()
+
+	var firstExpr ArithmeticExpression
+	var secondExpr ArithmeticExpression
+	if firstType == sample.Int64Type && secondType == sample.Int64Type {
+		function, firstExpr, secondExpr = "divi", first, second
+	} else if firstType == sample.Int64Type && secondType == sample.Float32Type {
+		function, firstExpr, secondExpr = "divf", &Function{
+			function: "casti2f",
+			args:     []ArithmeticExpression{first},
+		}, second
+	} else if firstType == sample.Float32Type && secondType == sample.Int64Type {
+		function, firstExpr, secondExpr = "divf", first, &Function{
+			function: "casti2f",
+			args:     []ArithmeticExpression{second},
 		}
+	} else if firstType == sample.Float32Type && secondType == sample.Float32Type {
+		function, firstExpr, secondExpr = "divf", first, second
+	} else {
+		panic("DataType Not supported")
 	}
 
-	tmp := &Function{function: function, args: []ArithmeticExpression{first, second}}
+	tmp := &Function{
+		function: function,
+		args:     []ArithmeticExpression{firstExpr, secondExpr},
+	}
 	tmp.check()
 	s.arithmetics.Push(tmp)
 }
@@ -251,15 +284,34 @@ func (s *Listener) ExitDivArithmeticExpression(ctx *DivArithmeticExpressionConte
 func (s *Listener) ExitSubArithmeticExpression(ctx *SubArithmeticExpressionContext) {
 	second := s.arithmetics.Pop()
 	first := s.arithmetics.Pop()
-	if first.GetDataType() != second.GetDataType() {
-		panic("DataType Mismatch")
-	}
 	function := "subf"
-	if first.GetDataType() == sample.Int64Type {
-		function = "subi"
+	firstType := first.GetDataType()
+	secondType := second.GetDataType()
+
+	var firstExpr ArithmeticExpression
+	var secondExpr ArithmeticExpression
+	if firstType == sample.Int64Type && secondType == sample.Int64Type {
+		function, firstExpr, secondExpr = "subi", first, second
+	} else if firstType == sample.Int64Type && secondType == sample.Float32Type {
+		function, firstExpr, secondExpr = "subf", &Function{
+			function: "casti2f",
+			args:     []ArithmeticExpression{first},
+		}, second
+	} else if firstType == sample.Float32Type && secondType == sample.Int64Type {
+		function, firstExpr, secondExpr = "subf", first, &Function{
+			function: "casti2f",
+			args:     []ArithmeticExpression{second},
+		}
+	} else if firstType == sample.Float32Type && secondType == sample.Float32Type {
+		function, firstExpr, secondExpr = "subf", first, second
+	} else {
+		panic("DataType Not supported")
 	}
-	tmp := &Function{function: function,
-		args: []ArithmeticExpression{first, second}}
+
+	tmp := &Function{
+		function: function,
+		args:     []ArithmeticExpression{firstExpr, secondExpr},
+	}
 	tmp.check()
 	s.arithmetics.Push(tmp)
 }
@@ -302,16 +354,33 @@ func (s *Listener) ExitRuntTimeFuncArithmeticExpression(ctx *RuntTimeFuncArithme
 func (s *Listener) ExitMulArithmeticExpression(ctx *MulArithmeticExpressionContext) {
 	second := s.arithmetics.Pop()
 	first := s.arithmetics.Pop()
-	if first.GetDataType() != second.GetDataType() {
-		panic("DataType Mismatch")
-	}
 	function := "mulf"
-	if first.GetDataType() == sample.Int64Type {
-		function = "muli"
+	firstType := first.GetDataType()
+	secondType := second.GetDataType()
+
+	var firstExpr ArithmeticExpression
+	var secondExpr ArithmeticExpression
+	if firstType == sample.Int64Type && secondType == sample.Int64Type {
+		function, firstExpr, secondExpr = "muli", first, second
+	} else if firstType == sample.Int64Type && secondType == sample.Float32Type {
+		function, firstExpr, secondExpr = "mulf", &Function{
+			function: "casti2f",
+			args:     []ArithmeticExpression{first},
+		}, second
+	} else if firstType == sample.Float32Type && secondType == sample.Int64Type {
+		function, firstExpr, secondExpr = "mulf", first, &Function{
+			function: "casti2f",
+			args:     []ArithmeticExpression{second},
+		}
+	} else if firstType == sample.Float32Type && secondType == sample.Float32Type {
+		function, firstExpr, secondExpr = "mulf", first, second
+	} else {
+		panic("DataType Not supported")
 	}
+
 	tmp := &Function{
 		function: function,
-		args:     []ArithmeticExpression{first, second},
+		args:     []ArithmeticExpression{firstExpr, secondExpr},
 	}
 	tmp.check()
 	s.arithmetics.Push(tmp)

@@ -136,3 +136,25 @@ func String2IntList(s string, split string) []int {
 
 	return ret
 }
+
+func String2Float64List(s string, split string) []float64 {
+	ss := StringSplit(s, split)
+	ret := make([]float64, len(ss))
+	for i := 0; i < len(ss); i++ {
+		v, _ := strconv.ParseFloat(ss[i], 64)
+		ret[i] = float64(v)
+	}
+
+	return ret
+}
+
+func String2Float32List(s string, split string) []float32 {
+	ss := StringSplit(s, split)
+	ret := make([]float32, len(ss))
+	for i := 0; i < len(ss); i++ {
+		v, _ := strconv.ParseFloat(ss[i], 32)
+		ret[i] = float32(v)
+	}
+
+	return ret
+}

@@ -3,17 +3,28 @@ package sample
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"strings"
 	"unsafe"
 
 	"github.com/bytedance/sonic"
 )
 
+// stringHeader, sliceHeader are deprecated, so we need to defined it here
+type stringHeader struct {
+	Data uintptr
+	Len  int
+}
+
+type sliceHeader struct {
+	Data uintptr
+	Len  int
+	Cap  int
+}
+
 const int64Size uintptr = unsafe.Sizeof(int64(0))
 const float32Size uintptr = unsafe.Sizeof(float32(0))
-const stringHeaderSize uintptr = unsafe.Sizeof(reflect.StringHeader{Data: 0, Len: 0})
-const sliceHeaderSize uintptr = unsafe.Sizeof(reflect.SliceHeader{Data: 0, Len: 0, Cap: 0})
+const stringHeaderSize uintptr = unsafe.Sizeof(stringHeader{Data: 0, Len: 0})
+const sliceHeaderSize uintptr = unsafe.Sizeof(sliceHeader{Data: 0, Len: 0, Cap: 0})
 
 type ImmutableFeature struct {
 	addr uintptr
@@ -253,7 +264,7 @@ func putString(value string, arena *Arena) uintptr {
 	size = ((size + 7) >> 3) << 3
 	data := arena.allocate(size)
 	setDataType(data, StringType)
-	header := (*reflect.StringHeader)(unsafe.Pointer(&data[8]))
+	header := (*stringHeader)(unsafe.Pointer(&data[8]))
 	header.Data = uintptr(unsafe.Pointer(&data[8+stringHeaderSize]))
 	header.Len = len(value)
 	copy(data[8+stringHeaderSize:], *(*[]byte)(unsafe.Pointer(&value)))
@@ -311,7 +322,7 @@ func getStrings(addr uintptr) ([]string, error) {
 
 func packInts(arr []int64, data []byte) {
 	p := uintptr(unsafe.Pointer(&data[sliceHeaderSize]))
-	slice := (*reflect.SliceHeader)(unsafe.Pointer(&data[0]))
+	slice := (*sliceHeader)(unsafe.Pointer(&data[0]))
 	slice.Data = p
 	slice.Cap = len(arr)
 	slice.Len = len(arr)
@@ -328,7 +339,7 @@ func sizeofInt64s(arr []int64) uintptr {
 
 func packFloats(arr []float32, data []byte) {
 	p := uintptr(unsafe.Pointer(&data[sliceHeaderSize]))
-	slice := (*reflect.SliceHeader)(unsafe.Pointer(&data[0]))
+	slice := (*sliceHeader)(unsafe.Pointer(&data[0]))
 	slice.Data = p
 	slice.Cap = len(arr)
 	slice.Len = len(arr)
@@ -345,17 +356,17 @@ func sizeofFloat32s(arr []float32) uintptr {
 
 func packStrs(arr []string, data []byte) {
 	p := uintptr(unsafe.Pointer(&data[sliceHeaderSize]))
-	slice := (*reflect.SliceHeader)(unsafe.Pointer(&data[0]))
+	slice := (*sliceHeader)(unsafe.Pointer(&data[0]))
 	slice.Data = p
 	slice.Cap = len(arr)
 	slice.Len = len(arr)
 	headerOffset := sliceHeaderSize
 	dataOffset := headerOffset + stringHeaderSize*uintptr(len(arr))
-	var str *reflect.StringHeader
+	var str *stringHeader
 	var size uintptr
-	for i := 0; i < len(arr); i++ {
+	for i := range arr {
 		size = uintptr(len(arr[i]))
-		str = (*reflect.StringHeader)(unsafe.Pointer(&data[headerOffset]))
+		str = (*stringHeader)(unsafe.Pointer(&data[headerOffset]))
 		str.Data = uintptr(unsafe.Pointer(&data[dataOffset]))
 		str.Len = len(arr[i])
 		copy(data[dataOffset:dataOffset+size], *(*[]byte)(unsafe.Pointer(&arr[i])))
@@ -370,7 +381,7 @@ func unpackStrs(addr uintptr) []string {
 
 func sizeofStrings(arr []string) uintptr {
 	size := sliceHeaderSize + stringHeaderSize*uintptr(len(arr))
-	for i := 0; i < len(arr); i++ {
+	for i := range arr {
 		size += uintptr(len(arr[i]))
 	}
 	return ((size + 7) >> 3) << 3
@@ -378,7 +389,7 @@ func sizeofStrings(arr []string) uintptr {
 
 func deepcpyOfStrings(arr []string) []string {
 	ret := make([]string, len(arr))
-	for i := 0; i < len(arr); i++ {
+	for i := range arr {
 		ret[i] = deepcopyOfString(arr[i])
 	}
 	return ret

@@ -21,7 +21,7 @@ func TestFeatures(t *testing.T) {
 	}`
 
 	strs := make([]string, 0, 100)
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		strs = append(strs, fmt.Sprintf("\"%d\"", i))
 	}
 	s := strings.Join(strs, ",")
@@ -121,7 +121,7 @@ func TestFeatures(t *testing.T) {
 	fmt.Printf("mutableFeas time cost: %s\n", elapsed)
 
 	start = time.Now()
-	for i := 0; i < count; i++ {
+	for range count {
 		immutableFeas.Get("E").GetStrings()
 	}
 	elapsed = time.Since(start)
@@ -138,7 +138,7 @@ func TestImmutableFeas(t *testing.T) {
 		"F":{"type":5, "value":[${data}]}
 	}`
 	strs := make([]string, 0, 100)
-	for i := 0; i < 10000; i++ {
+	for i := range 10000 {
 		strs = append(strs, fmt.Sprintf("\"%d\"", i))
 	}
 	s := strings.Join(strs, ",")
@@ -175,7 +175,7 @@ func TestMutableFeas(t *testing.T) {
 		"F":{"type":5, "value":[${data}]}
 	}`
 	strs := make([]string, 0, 100)
-	for i := 0; i < 10000; i++ {
+	for i := range 10000 {
 		strs = append(strs, fmt.Sprintf("\"%d\"", i))
 	}
 	s := strings.Join(strs, ",")

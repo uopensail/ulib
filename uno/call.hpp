@@ -28,34 +28,31 @@
 
 using Call = std::function<void(VarSlice *)>;
 
-class CallHelper {
- public:
-  CallHelper() = delete;
-  CallHelper(VarSlice *vars) : vars_(vars), index_(0) {
-#if !defined(__clang__)
-    index_ = vars->len - 2;
-#endif
-  }
-  ~CallHelper() = default;
-  template <typename T>
-  T *get() {
-#if !defined(__clang__)
-    return (T *)((*vars_)[index_--]);
-#else
-    return (T *)((*vars_)[index_++]);
-#endif
-  }
+template <typename T0, typename... ArgsType, size_t... Is>
+T0 *invoke_helper(T0 *(*f)(ArgsType *...), VarSlice *vars,
+                  std::index_sequence<Is...>) {
+  T0 *ret =
+      f((static_cast<
+          typename std::tuple_element<Is, std::tuple<ArgsType...>>::type *>(
+          (*vars)[Is]))...);
+  return ret;
+}
 
- private:
-  VarSlice *vars_;
-  int32_t index_;
-};
+template <typename T0, typename... ArgsType>
+T0 *invoke(T0 *(*f)(ArgsType *...), VarSlice *vars) {
+  for (size_t i = 0; i < sizeof...(ArgsType); i++) {
+    if ((*vars)[i] == nullptr) {
+      return nullptr;
+    }
+  }
+  return invoke_helper<T0, ArgsType...>(
+      f, vars, std::make_index_sequence<sizeof...(ArgsType)>{});
+}
 
 template <typename T0, typename... ArgsType>
 Call get_call(T0 *(*f)(ArgsType *...)) {
   auto foo = [f](VarSlice *vars) {
-    CallHelper helper(vars);
-    T0 *ret = safe_func_call<T0, ArgsType...>(f, helper.get<ArgsType>()...);
+    T0 *ret = invoke<T0, ArgsType...>(f, vars);
     vars->ptr[vars->len - 1] = ret;
   };
   return foo;

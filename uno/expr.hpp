@@ -138,4 +138,4 @@ struct Expression {
   }
 };
 
-#endif // UNO_EXPR_HPP
+#endif  // UNO_EXPR_HPP

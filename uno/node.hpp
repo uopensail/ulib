@@ -62,6 +62,7 @@ struct Node {
   virtual void operator()(VarSlice *) {}
 };
 
+using Node = struct Node;
 using NodePtrSlice = Slice<Node *>;
 
 struct VarNode : Node {
@@ -76,6 +77,7 @@ struct VarNode : Node {
   virtual NodeType type() { return NodeType::kVarNode; }
   virtual void operator()(VarSlice *vars) {}
 };
+using VarNode = struct VarNode;
 
 struct LiteralNode : Node {
   bool value;
@@ -93,6 +95,7 @@ struct LiteralNode : Node {
     (*vars)[id] = v;
   }
 };
+using LiteralNode = struct LiteralNode;
 
 struct Int64Node : Node {
   int64_t value;
@@ -112,6 +115,7 @@ struct Int64Node : Node {
     (*vars)[id] = v;
   }
 };
+using Int64Node = struct Int64Node;
 
 struct Int64SliceNode : Node {
   Int64Slice value;
@@ -132,6 +136,7 @@ struct Int64SliceNode : Node {
     (*vars)[id] = v;
   }
 };
+using Int64SliceNode = struct Int64SliceNode;
 
 struct Float32Node : Node {
   float value;
@@ -150,6 +155,7 @@ struct Float32Node : Node {
     (*vars)[id] = v;
   }
 };
+using Float32Node = struct Float32Node;
 
 struct Float32SliceNode : Node {
   Float32Slice value;
@@ -173,6 +179,7 @@ struct Float32SliceNode : Node {
     (*vars)[id] = v;
   }
 };
+using Float32SliceNode = struct Float32SliceNode;
 
 struct StringNode : Node {
   std::string value;
@@ -193,6 +200,7 @@ struct StringNode : Node {
     (*vars)[id] = v;
   }
 };
+using StringNode = struct StringNode;
 
 struct StringSliceNode : Node {
   StringSlice value;
@@ -221,6 +229,7 @@ struct StringSliceNode : Node {
     (*vars)[id] = v;
   }
 };
+using StringSliceNode = struct StringSliceNode;
 
 struct FunctionNode : Node {
   Function func;
@@ -230,10 +239,6 @@ struct FunctionNode : Node {
     auto iter = builtin_functions.find(json["func"].get<std::string>());
     assert(iter != builtin_functions.end());
     func.func = iter->second;
-
-#if !defined(__clang__)
-    func.args.reverse();
-#endif
   }
 
   virtual ~FunctionNode() {}
@@ -246,6 +251,7 @@ struct FunctionNode : Node {
     (*vars)[id] = func(vars);
   }
 };
+using FunctionNode = struct FunctionNode;
 
 struct AndNode : Node {
   int32_t left;
@@ -291,6 +297,7 @@ struct AndNode : Node {
     }
   }
 };
+using AndNode = struct AndNode;
 
 struct OrNode : Node {
   int32_t left;
@@ -332,23 +339,25 @@ struct OrNode : Node {
     }
   }
 };
+using OrNode = struct OrNode;
 
-template <typename T> static bool Compare(CmpType op, T *a, T *b) {
+template <typename T>
+static bool Compare(CmpType op, T *a, T *b) {
   switch (op) {
-  case kEqual:
-    return *a == *b;
-  case kNotEqual:
-    return *a != *b;
-  case kGreaterThan:
-    return *a > *b;
-  case kGreaterThanEqual:
-    return *a >= *b;
-  case kLessThan:
-    return *a < *b;
-  case kLessThanEqual:
-    return *a <= *b;
-  default:
-    return false;
+    case kEqual:
+      return *a == *b;
+    case kNotEqual:
+      return *a != *b;
+    case kGreaterThan:
+      return *a > *b;
+    case kGreaterThanEqual:
+      return *a >= *b;
+    case kLessThan:
+      return *a < *b;
+    case kLessThanEqual:
+      return *a <= *b;
+    default:
+      return false;
   }
 }
 
@@ -394,8 +403,10 @@ struct CmpNode : Node {
     }
   }
 };
+using CmpNode = struct CmpNode;
 
-template <typename T> static bool InSlice(T &v, Slice<T> &slice) {
+template <typename T>
+static bool InSlice(T &v, Slice<T> &slice) {
   for (size_t i = 0; i < slice.size(); i++) {
     if (v == slice[i]) {
       return true;
@@ -404,10 +415,35 @@ template <typename T> static bool InSlice(T &v, Slice<T> &slice) {
   return false;
 }
 
-template <typename T> static bool NotInSlice(T &v, Slice<T> &slice) {
+template <typename T>
+static bool InSlice(Slice<T> &v, Slice<T> &slice) {
+  for (size_t j = 0; j < v.size(); j++) {
+    for (size_t i = 0; i < slice.size(); i++) {
+      if (v[j] == slice[i]) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+template <typename T>
+static bool NotInSlice(T &v, Slice<T> &slice) {
   for (size_t i = 0; i < slice.size(); i++) {
     if (v == slice[i]) {
       return false;
+    }
+  }
+  return true;
+}
+
+template <typename T>
+static bool NotInSlice(Slice<T> &v, Slice<T> &slice) {
+  for (size_t j = 0; j < v.size(); j++) {
+    for (size_t i = 0; i < slice.size(); i++) {
+      if (v[j] == slice[i]) {
+        return false;
+      }
     }
   }
   return true;
@@ -442,19 +478,25 @@ struct InNode : Node {
       *ret = InSlice<int64_t>(*static_cast<int64_t *>(lv),
                               *static_cast<Int64Slice *>(rv));
       (*vars)[id] = ret;
-    } else if (dtype == DataType::kFloat32) {
-      bool *ret = (bool *)malloc(sizeof(bool));
-      *ret = InSlice<float>(*static_cast<float *>(lv),
-                            *static_cast<Float32Slice *>((*vars)[right]));
-      (*vars)[id] = ret;
     } else if (dtype == DataType::kString) {
       bool *ret = (bool *)malloc(sizeof(bool));
       *ret = InSlice<GoString>(*static_cast<GoString *>((*vars)[left]),
                                *static_cast<StringSlice *>((*vars)[right]));
       (*vars)[id] = ret;
+    } else if (dtype == DataType::kInt64s) {
+      bool *ret = (bool *)malloc(sizeof(bool));
+      *ret = InSlice<int64_t>(*static_cast<Int64Slice *>((*vars)[left]),
+                              *static_cast<Int64Slice *>((*vars)[right]));
+      (*vars)[id] = ret;
+    } else if (dtype == DataType::kStrings) {
+      bool *ret = (bool *)malloc(sizeof(bool));
+      *ret = InSlice<GoString>(*static_cast<StringSlice *>((*vars)[left]),
+                               *static_cast<StringSlice *>((*vars)[right]));
+      (*vars)[id] = ret;
     }
   }
 };
+using InNode = struct InNode;
 
 struct NotInNode : Node {
   int32_t left;
@@ -477,18 +519,25 @@ struct NotInNode : Node {
       *ret = NotInSlice<int64_t>(*static_cast<int64_t *>((*vars)[left]),
                                  *static_cast<Int64Slice *>((*vars)[right]));
       (*vars)[id] = ret;
-    } else if (dtype == DataType::kFloat32) {
+    } else if (dtype == DataType::kInt64s) {
       bool *ret = (bool *)malloc(sizeof(bool));
-      *ret = NotInSlice<float>(*static_cast<float *>((*vars)[left]),
-                               *static_cast<Float32Slice *>((*vars)[right]));
+
+      *ret = NotInSlice<int64_t>(*static_cast<Int64Slice *>((*vars)[left]),
+                                 *static_cast<Int64Slice *>((*vars)[right]));
       (*vars)[id] = ret;
     } else if (dtype == DataType::kString) {
       bool *ret = (bool *)malloc(sizeof(bool));
       *ret = NotInSlice<GoString>(*static_cast<GoString *>((*vars)[left]),
                                   *static_cast<StringSlice *>((*vars)[right]));
       (*vars)[id] = ret;
+    } else if (dtype == DataType::kStrings) {
+      bool *ret = (bool *)malloc(sizeof(bool));
+      *ret = NotInSlice<GoString>(*static_cast<StringSlice *>((*vars)[left]),
+                                  *static_cast<StringSlice *>((*vars)[right]));
+      (*vars)[id] = ret;
     }
   }
 };
+using NotInNode = struct NotInNode;
 
-#endif // UNO_NODE_HPP
+#endif  // UNO_NODE_HPP

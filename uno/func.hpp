@@ -39,28 +39,31 @@ struct Function {
 };
 using Function = struct Function;
 
-class FuncHelper {
- public:
-  FuncHelper() = delete;
-  FuncHelper(Function *func, VarSlice *vars)
-      : func_(func), vars_(vars), index_(0) {}
-  ~FuncHelper() = default;
-  template <typename T>
-  T *get() {
-    return (T *)((*vars_)[func_->args[index_++]]);
-  }
+template <typename T0, typename... ArgsType, size_t... Is>
+T0 *invoke_helper(Function *func, T0 *(*f)(ArgsType *...), VarSlice *vars,
+                  std::index_sequence<Is...>) {
+  T0 *ret =
+      f((static_cast<
+          typename std::tuple_element<Is, std::tuple<ArgsType...>>::type *>(
+          (*vars)[func->args[Is]]))...);
+  return ret;
+}
 
- private:
-  Function *func_;
-  VarSlice *vars_;
-  int32_t index_;
-};
+template <typename T0, typename... ArgsType>
+T0 *invoke(Function *func, T0 *(*f)(ArgsType *...), VarSlice *vars) {
+  for (size_t i = 0; i < sizeof...(ArgsType); i++) {
+    if ((*vars)[i] == nullptr) {
+      return nullptr;
+    }
+  }
+  return invoke_helper<T0, ArgsType...>(
+      func, f, vars, std::make_index_sequence<sizeof...(ArgsType)>{});
+}
 
 template <typename T0, typename... ArgsType>
 Func get_func(T0 *(*f)(ArgsType *...)) {
-  auto foo = [f](Function *func, VarSlice *vars) -> void * {
-    FuncHelper helper(func, vars);
-    return safe_func_call<T0, ArgsType...>(f, helper.get<ArgsType>()...);
+  auto foo = [f](Function *func, VarSlice *vars) {
+    return invoke<T0, ArgsType...>(func, f, vars);
   };
   return foo;
 }

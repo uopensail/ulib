@@ -43,6 +43,12 @@ type unoListener interface {
 	// EnterAddArithmeticExpression is called when entering the AddArithmeticExpression production.
 	EnterAddArithmeticExpression(c *AddArithmeticExpressionContext)
 
+	// EnterModArithmeticExpression is called when entering the ModArithmeticExpression production.
+	EnterModArithmeticExpression(c *ModArithmeticExpressionContext)
+
+	// EnterRuntTimeFuncArithmeticExpression is called when entering the RuntTimeFuncArithmeticExpression production.
+	EnterRuntTimeFuncArithmeticExpression(c *RuntTimeFuncArithmeticExpressionContext)
+
 	// EnterStringArithmeticExpression is called when entering the StringArithmeticExpression production.
 	EnterStringArithmeticExpression(c *StringArithmeticExpressionContext)
 
@@ -61,23 +67,11 @@ type unoListener interface {
 	// EnterDivArithmeticExpression is called when entering the DivArithmeticExpression production.
 	EnterDivArithmeticExpression(c *DivArithmeticExpressionContext)
 
-	// EnterFieldColumnArithmeticExpression is called when entering the FieldColumnArithmeticExpression production.
-	EnterFieldColumnArithmeticExpression(c *FieldColumnArithmeticExpressionContext)
-
-	// EnterSubArithmeticExpression is called when entering the SubArithmeticExpression production.
-	EnterSubArithmeticExpression(c *SubArithmeticExpressionContext)
-
-	// EnterModArithmeticExpression is called when entering the ModArithmeticExpression production.
-	EnterModArithmeticExpression(c *ModArithmeticExpressionContext)
-
-	// EnterRuntTimeFuncArithmeticExpression is called when entering the RuntTimeFuncArithmeticExpression production.
-	EnterRuntTimeFuncArithmeticExpression(c *RuntTimeFuncArithmeticExpressionContext)
-
 	// EnterMulArithmeticExpression is called when entering the MulArithmeticExpression production.
 	EnterMulArithmeticExpression(c *MulArithmeticExpressionContext)
 
-	// EnterType_marker is called when entering the type_marker production.
-	EnterType_marker(c *Type_markerContext)
+	// EnterSubArithmeticExpression is called when entering the SubArithmeticExpression production.
+	EnterSubArithmeticExpression(c *SubArithmeticExpressionContext)
 
 	// ExitStart is called when exiting the start production.
 	ExitStart(c *StartContext)
@@ -115,6 +109,12 @@ type unoListener interface {
 	// ExitAddArithmeticExpression is called when exiting the AddArithmeticExpression production.
 	ExitAddArithmeticExpression(c *AddArithmeticExpressionContext)
 
+	// ExitModArithmeticExpression is called when exiting the ModArithmeticExpression production.
+	ExitModArithmeticExpression(c *ModArithmeticExpressionContext)
+
+	// ExitRuntTimeFuncArithmeticExpression is called when exiting the RuntTimeFuncArithmeticExpression production.
+	ExitRuntTimeFuncArithmeticExpression(c *RuntTimeFuncArithmeticExpressionContext)
+
 	// ExitStringArithmeticExpression is called when exiting the StringArithmeticExpression production.
 	ExitStringArithmeticExpression(c *StringArithmeticExpressionContext)
 
@@ -133,21 +133,9 @@ type unoListener interface {
 	// ExitDivArithmeticExpression is called when exiting the DivArithmeticExpression production.
 	ExitDivArithmeticExpression(c *DivArithmeticExpressionContext)
 
-	// ExitFieldColumnArithmeticExpression is called when exiting the FieldColumnArithmeticExpression production.
-	ExitFieldColumnArithmeticExpression(c *FieldColumnArithmeticExpressionContext)
-
-	// ExitSubArithmeticExpression is called when exiting the SubArithmeticExpression production.
-	ExitSubArithmeticExpression(c *SubArithmeticExpressionContext)
-
-	// ExitModArithmeticExpression is called when exiting the ModArithmeticExpression production.
-	ExitModArithmeticExpression(c *ModArithmeticExpressionContext)
-
-	// ExitRuntTimeFuncArithmeticExpression is called when exiting the RuntTimeFuncArithmeticExpression production.
-	ExitRuntTimeFuncArithmeticExpression(c *RuntTimeFuncArithmeticExpressionContext)
-
 	// ExitMulArithmeticExpression is called when exiting the MulArithmeticExpression production.
 	ExitMulArithmeticExpression(c *MulArithmeticExpressionContext)
 
-	// ExitType_marker is called when exiting the type_marker production.
-	ExitType_marker(c *Type_markerContext)
+	// ExitSubArithmeticExpression is called when exiting the SubArithmeticExpression production.
+	ExitSubArithmeticExpression(c *SubArithmeticExpressionContext)
 }

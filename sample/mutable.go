@@ -47,7 +47,7 @@ func (f *MutableFeatures) Set(key string, value Feature) {
 	f.features[key] = value
 }
 
-func (f *MutableFeatures) MarshalJSON() ([]byte, error) {
+func (f *MutableFeatures) MapAny() map[string]any {
 	feas := make(map[string]interface{})
 	for key, value := range f.features {
 		switch value.Type() {
@@ -101,6 +101,10 @@ func (f *MutableFeatures) MarshalJSON() ([]byte, error) {
 			}
 		}
 	}
+	return feas
+}
+func (f *MutableFeatures) MarshalJSON() ([]byte, error) {
+	feas := f.MapAny()
 	return sonic.Marshal(feas)
 }
 

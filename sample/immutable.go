@@ -86,8 +86,7 @@ func (f *ImmutableFeatures) Keys() []string {
 	}
 	return ret
 }
-
-func (f *ImmutableFeatures) MarshalJSON() ([]byte, error) {
+func (f *ImmutableFeatures) MapAny() map[string]any {
 	feas := make(map[string]interface{})
 
 	for key, fea := range f.features {
@@ -149,6 +148,11 @@ func (f *ImmutableFeatures) MarshalJSON() ([]byte, error) {
 			}
 		}
 	}
+	return feas
+}
+
+func (f *ImmutableFeatures) MarshalJSON() ([]byte, error) {
+	feas := f.MapAny()
 	return sonic.Marshal(feas)
 }
 

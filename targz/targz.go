@@ -1,8 +1,10 @@
 // Package targz contains methods to create and extract tar gz archives.
 //
 // Usage (discarding potential errors):
-//   	targz.Compress("path/to/the/directory/to/compress", "my_archive.tar.gz")
-//   	targz.Extract("my_archive.tar.gz", "directory/to/extract/to")
+//
+//	targz.Compress("path/to/the/directory/to/compress", "my_archive.tar.gz")
+//	targz.Extract("my_archive.tar.gz", "directory/to/extract/to")
+//
 // This creates an archive in ./my_archive.tar.gz with the folder "compress" (last in the path).
 // And extracts the folder "compress" to "directory/to/extract/to/". The folder structure is created if it doesn't exist.
 package targz
@@ -91,7 +93,7 @@ func mkdirAll(dirPath string, perm os.FileMode) (func(), error) {
 				break
 			}
 
-			return nil, &os.PathError{"mkdirAll", p, syscall.ENOTDIR}
+			return nil, &os.PathError{Op: "mkdirAll", Path: p, Err: syscall.ENOTDIR}
 		}
 
 		if os.IsNotExist(err) {
@@ -182,7 +184,7 @@ func compress(inPath, outFilePath, subPath string) (err error) {
 
 // Read a directy and write it to the tar writer. Recursive function that writes all sub folders.
 func writeDirectory(directory string, tarWriter *tar.Writer, subPath string) error {
-	files, err := ioutil.ReadDir(directory)
+	files, err := os.ReadDir(directory)
 	if err != nil {
 		return err
 	}
@@ -195,10 +197,15 @@ func writeDirectory(directory string, tarWriter *tar.Writer, subPath string) err
 				return err
 			}
 		} else {
-			err = writeTarGz(currentPath, tarWriter, file, subPath)
+			info, err := file.Info()
 			if err != nil {
 				return err
 			}
+			err = writeTarGz(currentPath, tarWriter, info, subPath)
+			if err != nil {
+				return err
+			}
+
 		}
 	}
 

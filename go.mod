@@ -5,10 +5,7 @@ go 1.22
 toolchain go1.23.6
 
 require (
-	github.com/aliyun/aliyun-oss-go-sdk v2.2.9+incompatible
-	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230219212500-1f9a474cc2dc
-	github.com/antlr4-go/antlr v0.0.0-20230518091524-98b52378c522
-	github.com/aws/aws-sdk-go v1.45.16
+	github.com/antlr4-go/antlr/v4 v4.13.1
 	github.com/bytedance/sonic v1.12.9
 	github.com/go-kratos/kratos/contrib/registry/etcd/v2 v2.0.0-20230830131453-6c026bce56a9
 	github.com/go-kratos/kratos/v2 v2.7.0
@@ -35,7 +32,6 @@ require (
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
-	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect
@@ -50,7 +46,6 @@ require (
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
-	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/genproto v0.0.0-20230822172742-b8732ec3820d // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230822172742-b8732ec3820d // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d // indirect

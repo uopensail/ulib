@@ -24,13 +24,13 @@ var (
 type DataType uint64
 
 const (
-	InvalidType  DataType = iota // Invalid or uninitialized type
-	Int64Type                    // 64-bit signed integer
+	Int64Type    DataType = iota // 64-bit signed integer
 	Float32Type                  // 32-bit floating point
 	StringType                   // UTF-8 string
 	Int64sType                   // Slice of 64-bit signed integers
 	Float32sType                 // Slice of 32-bit floating points
 	StringsType                  // Slice of UTF-8 strings
+	InvalidType  DataType = 127  // Invalid or uninitialized type
 )
 
 /**

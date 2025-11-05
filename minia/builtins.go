@@ -1144,10 +1144,7 @@ func Substr(s string, start, length int64) (string, error) {
 		return "", nil
 	}
 
-	end := start + length
-	if end > int64(len(runes)) {
-		end = int64(len(runes))
-	}
+	end := min(start+length, int64(len(runes)))
 
 	return string(runes[start:end]), nil
 }

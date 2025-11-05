@@ -19,15 +19,6 @@ var (
 	builtinsOnce sync.Once
 )
 
-/**
- * @brief Initialize built-in functions (thread-safe)
- */
-func initBuiltins() {
-	builtinsOnce.Do(func() {
-		registerFunctions()
-	})
-}
-
 // ========== Column Handler ==========
 
 /**
@@ -206,9 +197,6 @@ func NewMinia(exprs []string) *Minia {
 		panic("no expressions provided")
 	}
 
-	// Ensure built-in functions are initialized
-	initBuiltins()
-
 	// Parse expressions
 	input := strings.Join(exprs, ";")
 	stream := antlr.NewInputStream(input)
@@ -376,8 +364,8 @@ func (m *Minia) Eval(features ...sample.Features) sample.Features {
 }
 
 func init() {
-	builtins = make(map[string]FunctionWrapper)
 	builtinsOnce.Do(func() {
+		builtins = make(map[string]FunctionWrapper)
 		registerFunctions()
 	})
 }

@@ -25,12 +25,12 @@ import (
 func TestFeatures(t *testing.T) {
 	// Create test data with all supported types
 	data := `{
-		"A":{"type":1, "value":1}, 
-		"B":{"type":2, "value":1.5},
-		"C":{"type":3, "value":"hello world"},
-		"D":{"type":4, "value":[5, 5, 6]},
-		"E":{"type":5, "value":[3.4, 5.7]},
-		"F":{"type":6, "value":[${data}]}
+		"A":{"type":0, "value":1}, 
+		"B":{"type":1, "value":1.5},
+		"C":{"type":2, "value":"hello world"},
+		"D":{"type":3, "value":[5, 5, 6]},
+		"E":{"type":4, "value":[3.4, 5.7]},
+		"F":{"type":5, "value":[${data}]}
 	}`
 
 	// Generate large string array for testing
@@ -397,16 +397,16 @@ func TestFeatureConversion(t *testing.T) {
  */
 func createTestData(stringCount int) string {
 	data := `{
-		"A":{"type":1, "value":1}, 
-		"B":{"type":2, "value":1.5},
-		"C":{"type":3, "value":"hello world"},
-		"D":{"type":4, "value":[5, 5, 6]},
-		"E":{"type":5, "value":[3.4, 5.7]},
-		"F":{"type":6, "value":[${data}]}
+		"A":{"type":0, "value":1}, 
+		"B":{"type":1, "value":1.5},
+		"C":{"type":2, "value":"hello world"},
+		"D":{"type":3, "value":[5, 5, 6]},
+		"E":{"type":4, "value":[3.4, 5.7]},
+		"F":{"type":5, "value":[${data}]}
 	}`
 
 	strs := make([]string, 0, stringCount)
-	for i := 0; i < stringCount; i++ {
+	for i := range stringCount {
 		strs = append(strs, fmt.Sprintf("\"%d\"", i))
 	}
 	s := strings.Join(strs, ",")
@@ -420,7 +420,7 @@ func createTestData(stringCount int) string {
  * @param features Features collection to verify
  * @param name Name for logging purposes
  */
-func verifyFeatureValues(t *testing.T, features interface{}, name string) {
+func verifyFeatureValues(t *testing.T, features any, name string) {
 	var getter interface {
 		Get(string) Feature
 		Has(string) bool

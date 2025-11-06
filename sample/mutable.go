@@ -2,42 +2,37 @@ package sample
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
+	"unsafe"
 
 	"github.com/bytedance/sonic"
 )
 
-var (
-	ErrNotImplemented = errors.New("method not implemented for this type")
-	ErrKeyNotFound    = errors.New("key not found")
-)
-
 /**
-* @brief MutableFeatures is a collection of mutable typed features
-*
-* This collection allows modification of features after creation, unlike ImmutableFeatures.
-* It provides type-safe operations and supports conversion to immutable features
-* for performance-critical read operations.
-*
-* Key characteristics:
-* - Mutable: Features can be added, modified, or removed after creation
-* - Type-safe: Runtime type checking prevents type mismatches
-* - JSON serialization: Full support for marshaling/unmarshaling
-* - Conversion: Can be converted to ImmutableFeatures for zero-copy access
-*
-* Note: This collection is NOT thread-safe. External synchronization is required
-* for concurrent access.
+ * @brief MutableFeatures is a collection of mutable typed features
+ *
+ * This collection allows modification of features after creation, unlike ImmutableFeatures.
+ * It provides type-safe operations and supports conversion to immutable features
+ * for performance-critical read operations.
+ *
+ * Key characteristics:
+ * - Mutable: Features can be added, modified, or removed after creation
+ * - Type-safe: Runtime type checking prevents type mismatches
+ * - JSON serialization: Full support for marshaling/unmarshaling
+ * - Conversion: Can be converted to ImmutableFeatures for zero-copy access
+ *
+ * Note: This collection is NOT thread-safe. External synchronization is required
+ * for concurrent access.
  */
 type MutableFeatures struct {
 	features map[string]Feature // Map of feature name to feature implementation
 }
 
 /**
-* @brief Creates a new empty MutableFeatures collection
-*
-* @return Pointer to new MutableFeatures collection
+ * @brief Creates a new empty MutableFeatures collection
+ *
+ * @return Pointer to new MutableFeatures collection
  */
 func NewMutableFeatures() *MutableFeatures {
 	return &MutableFeatures{
@@ -46,26 +41,26 @@ func NewMutableFeatures() *MutableFeatures {
 }
 
 /**
-* @brief Creates MutableFeatures from a map of values
-*
-* @param data Map of feature names to values
-* @return Pointer to new MutableFeatures and error if conversion fails
-*
-* Supported value types:
-* - int, int64: stored as Int64 feature
-* - float32, float64: stored as Float32 feature
-* - string: stored as String feature
-* - []int, []int64: stored as Int64s feature
-* - []float32, []float64: stored as Float32s feature
-* - []string: stored as Strings feature
+ * @brief Creates MutableFeatures from a map of values
+ *
+ * @param data Map of feature names to values
+ * @return Pointer to new MutableFeatures and error if conversion fails
+ *
+ * Supported value types:
+ * - int, int64: stored as Int64 feature
+ * - float32, float64: stored as Float32 feature (float64 converted to float32)
+ * - string: stored as String feature
+ * - []int, []int64: stored as Int64s feature
+ * - []float32, []float64: stored as Float32s feature (float64 converted to float32)
+ * - []string: stored as Strings feature
  */
 func NewMutableFeaturesFromMap(data map[string]any) (*MutableFeatures, error) {
 	features := NewMutableFeatures()
 
 	for key, value := range data {
-		feature, err := createFeatureFromValue(value)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create feature for key %s: %w", key, err)
+		feature := createFeatureFromValue(value)
+		if feature == nil {
+			return nil, fmt.Errorf("failed to create feature for key %s: %v", key, value)
 		}
 		features.features[key] = feature
 	}
@@ -74,10 +69,10 @@ func NewMutableFeaturesFromMap(data map[string]any) (*MutableFeatures, error) {
 }
 
 /**
-* @brief Gets the data type of a feature by key
-*
-* @param key Feature name
-* @return DataType of the feature, InvalidType if not found
+ * @brief Gets the data type of a feature by key
+ *
+ * @param key Feature name
+ * @return DataType of the feature, InvalidType if not found
  */
 func (f *MutableFeatures) GetType(key string) DataType {
 	if feature, ok := f.features[key]; ok {
@@ -87,9 +82,9 @@ func (f *MutableFeatures) GetType(key string) DataType {
 }
 
 /**
-* @brief Returns all feature names
-*
-* @return Slice of feature names
+ * @brief Returns all feature names
+ *
+ * @return Slice of feature names in no particular order
  */
 func (f *MutableFeatures) Keys() []string {
 	ret := make([]string, 0, len(f.features))
@@ -100,19 +95,19 @@ func (f *MutableFeatures) Keys() []string {
 }
 
 /**
-* @brief Returns the number of features in the collection
-*
-* @return Number of features
+ * @brief Returns the number of features in the collection
+ *
+ * @return Number of features
  */
 func (f *MutableFeatures) Len() int {
 	return len(f.features)
 }
 
 /**
-* @brief Retrieves a feature by name
-*
-* @param key Feature name
-* @return Feature interface or nil if not found
+ * @brief Retrieves a feature by name
+ *
+ * @param key Feature name
+ * @return Feature interface or nil if not found
  */
 func (f *MutableFeatures) Get(key string) Feature {
 	if value, ok := f.features[key]; ok {
@@ -122,10 +117,10 @@ func (f *MutableFeatures) Get(key string) Feature {
 }
 
 /**
-* @brief Checks if a feature exists
-*
-* @param key Feature name
-* @return True if feature exists, false otherwise
+ * @brief Checks if a feature exists
+ *
+ * @param key Feature name
+ * @return True if feature exists, false otherwise
  */
 func (f *MutableFeatures) Has(key string) bool {
 	_, ok := f.features[key]
@@ -133,36 +128,36 @@ func (f *MutableFeatures) Has(key string) bool {
 }
 
 /**
-* @brief Sets or updates a feature
-*
-* @param key Feature name
-* @param value Feature implementation to store
+ * @brief Sets or updates a feature
+ *
+ * @param key Feature name
+ * @param value Feature implementation to store
  */
 func (f *MutableFeatures) Set(key string, value Feature) {
 	f.features[key] = value
 }
 
 /**
-* @brief Sets a feature from any supported value type
-*
-* @param key Feature name
-* @param value Value to store (must be supported type)
-* @return Error if value type is unsupported
+ * @brief Sets a feature from any supported value type
+ *
+ * @param key Feature name
+ * @param value Value to store (must be supported type)
+ * @return Error if value type is unsupported
  */
 func (f *MutableFeatures) SetValue(key string, value any) error {
-	feature, err := createFeatureFromValue(value)
-	if err != nil {
-		return fmt.Errorf("failed to create feature for key %s: %w", key, err)
+	feature := createFeatureFromValue(value)
+	if feature == nil {
+		return fmt.Errorf("failed to create feature for key %s: %v", key, value)
 	}
 	f.features[key] = feature
 	return nil
 }
 
 /**
-* @brief Removes a feature by key
-*
-* @param key Feature name to remove
-* @return True if feature was removed, false if not found
+ * @brief Removes a feature by key
+ *
+ * @param key Feature name to remove
+ * @return True if feature was removed, false if not found
  */
 func (f *MutableFeatures) Delete(key string) bool {
 	if _, exists := f.features[key]; exists {
@@ -173,12 +168,12 @@ func (f *MutableFeatures) Delete(key string) bool {
 }
 
 /**
-* @brief Iterates over all features with a callback function
-*
-* @param fn Callback function called for each feature
-* @return Error if callback returns error
+ * @brief Iterates over all features with a callback function
+ *
+ * @param fn Callback function called for each feature
+ * @return Error if callback returns error
  */
-func (f *MutableFeatures) ForEach(fn func(key string, feature Feature) error) error {
+func (f *MutableFeatures) ForEach(fn IteratorFunc) error {
 	for key, feature := range f.features {
 		if err := fn(key, feature); err != nil {
 			return err
@@ -188,13 +183,13 @@ func (f *MutableFeatures) ForEach(fn func(key string, feature Feature) error) er
 }
 
 /**
-* @brief Converts features to a map for serialization
-*
-* @return Map of feature names to structured values and error if conversion fails
-*
-* Each value in the returned map contains:
-* - Type: DataType of the feature
-* - Value: The actual value
+ * @brief Converts features to a map for serialization
+ *
+ * @return Map of feature names to structured values and error if conversion fails
+ *
+ * Each value in the returned map contains:
+ * - Type: DataType of the feature
+ * - Value: The actual value
  */
 func (f *MutableFeatures) MapAny() (map[string]any, error) {
 	feas := make(map[string]any, len(f.features))
@@ -202,65 +197,39 @@ func (f *MutableFeatures) MapAny() (map[string]any, error) {
 	for key, value := range f.features {
 		switch value.Type() {
 		case Int64Type:
-			v, err := value.GetInt64()
-			if err != nil {
-				return nil, fmt.Errorf("failed to get int64 for key %s: %w", key, err)
-			}
 			feas[key] = struct {
 				Type  DataType `json:"type"`
 				Value int64    `json:"value"`
-			}{Int64Type, v}
-
+			}{Int64Type, value.GetInt64Unsafe()}
 		case Float32Type:
-			v, err := value.GetFloat32()
-			if err != nil {
-				return nil, fmt.Errorf("failed to get float32 for key %s: %w", key, err)
-			}
 			feas[key] = struct {
 				Type  DataType `json:"type"`
 				Value float32  `json:"value"`
-			}{Float32Type, v}
+			}{Float32Type, value.GetFloat32Unsafe()}
 
 		case StringType:
-			v, err := value.GetString()
-			if err != nil {
-				return nil, fmt.Errorf("failed to get string for key %s: %w", key, err)
-			}
 			feas[key] = struct {
 				Type  DataType `json:"type"`
 				Value string   `json:"value"`
-			}{StringType, v}
+			}{StringType, value.GetStringUnsafe()}
 
 		case Int64sType:
-			v, err := value.GetInt64s()
-			if err != nil {
-				return nil, fmt.Errorf("failed to get int64s for key %s: %w", key, err)
-			}
 			feas[key] = struct {
 				Type  DataType `json:"type"`
 				Value []int64  `json:"value"`
-			}{Int64sType, v}
+			}{Int64sType, value.GetInt64sUnsafe()}
 
 		case Float32sType:
-			v, err := value.GetFloat32s()
-			if err != nil {
-				return nil, fmt.Errorf("failed to get float32s for key %s: %w", key, err)
-			}
 			feas[key] = struct {
 				Type  DataType  `json:"type"`
 				Value []float32 `json:"value"`
-			}{Float32sType, v}
+			}{Float32sType, value.GetFloat32sUnsafe()}
 
 		case StringsType:
-			v, err := value.GetStrings()
-			if err != nil {
-				return nil, fmt.Errorf("failed to get strings for key %s: %w", key, err)
-			}
 			feas[key] = struct {
 				Type  DataType `json:"type"`
 				Value []string `json:"value"`
-			}{StringsType, v}
-
+			}{StringsType, value.GetStringsUnsafe()}
 		default:
 			return nil, fmt.Errorf("unknown data type %v for key %s", value.Type(), key)
 		}
@@ -269,9 +238,9 @@ func (f *MutableFeatures) MapAny() (map[string]any, error) {
 }
 
 /**
-* @brief Marshals features to JSON
-*
-* @return JSON bytes and error if marshaling fails
+ * @brief Marshals features to JSON
+ *
+ * @return JSON bytes and error if marshaling fails
  */
 func (f *MutableFeatures) MarshalJSON() ([]byte, error) {
 	feas, err := f.MapAny()
@@ -282,10 +251,10 @@ func (f *MutableFeatures) MarshalJSON() ([]byte, error) {
 }
 
 /**
-* @brief Unmarshals features from JSON
-*
-* @param data JSON bytes to unmarshal
-* @return Error if unmarshaling fails
+ * @brief Unmarshals features from JSON
+ *
+ * @param data JSON bytes to unmarshal
+ * @return Error if unmarshaling fails
  */
 func (f *MutableFeatures) UnmarshalJSON(data []byte) error {
 	type Fea struct {
@@ -297,6 +266,11 @@ func (f *MutableFeatures) UnmarshalJSON(data []byte) error {
 	err := sonic.Unmarshal(data, &fea)
 	if err != nil {
 		return err
+	}
+
+	// Initialize features map if not already initialized
+	if f.features == nil {
+		f.features = make(map[string]Feature)
 	}
 
 	for key, value := range fea {
@@ -351,64 +325,34 @@ func (f *MutableFeatures) UnmarshalJSON(data []byte) error {
 }
 
 /**
-* @brief Converts to ImmutableFeatures for zero-copy read access
-*
-* @param arena Memory arena for storage (creates new if nil)
-* @return Pointer to new ImmutableFeatures and error if conversion fails
-*
-* All values are deep-copied into arena memory to ensure independence
-* from the original mutable features.
+ * @brief Converts to ImmutableFeatures for zero-copy read access
+ *
+ * @param arena Memory arena for storage
+ * @return Pointer to new ImmutableFeatures and error if conversion fails
+ *
+ * All values are deep-copied into arena memory to ensure independence
+ * from the original mutable features.
  */
 func (f *MutableFeatures) Immutable(arena *Arena) (*ImmutableFeatures, error) {
 	immutable := NewImmutableFeatures(arena)
 
 	for key, feature := range f.features {
-		var addr uintptr
+		var ptr unsafe.Pointer
 		var err error
 
 		switch feature.Type() {
 		case Int64Type:
-			if v, getErr := feature.GetInt64(); getErr == nil {
-				addr, err = putInt64(v, arena)
-			} else {
-				err = getErr
-			}
-
+			ptr, err = putInt64(feature.GetInt64Unsafe(), arena)
 		case Float32Type:
-			if v, getErr := feature.GetFloat32(); getErr == nil {
-				addr, err = putFloat32(v, arena)
-			} else {
-				err = getErr
-			}
-
+			ptr, err = putFloat32(feature.GetFloat32Unsafe(), arena)
 		case StringType:
-			if v, getErr := feature.GetString(); getErr == nil {
-				addr, err = putString(v, arena)
-			} else {
-				err = getErr
-			}
-
+			ptr, err = putString(feature.GetStringUnsafe(), arena)
 		case Int64sType:
-			if v, getErr := feature.GetInt64s(); getErr == nil {
-				addr, err = putInt64s(v, arena)
-			} else {
-				err = getErr
-			}
-
+			ptr, err = putInt64s(feature.GetInt64sUnsafe(), arena)
 		case Float32sType:
-			if v, getErr := feature.GetFloat32s(); getErr == nil {
-				addr, err = putFloat32s(v, arena)
-			} else {
-				err = getErr
-			}
-
+			ptr, err = putFloat32s(feature.GetFloat32sUnsafe(), arena)
 		case StringsType:
-			if v, getErr := feature.GetStrings(); getErr == nil {
-				addr, err = putStrings(v, arena)
-			} else {
-				err = getErr
-			}
-
+			ptr, err = putStrings(feature.GetStringsUnsafe(), arena)
 		default:
 			err = fmt.Errorf("unsupported feature type %v for key %s", feature.Type(), key)
 		}
@@ -417,18 +361,19 @@ func (f *MutableFeatures) Immutable(arena *Arena) (*ImmutableFeatures, error) {
 			return nil, fmt.Errorf("failed to convert feature %s: %w", key, err)
 		}
 
-		immutable.features[key] = ImmutableFeature{addr: addr}
+		immutable.features[key] = ImmutableFeature{ptr: ptr}
 	}
 
 	return immutable, nil
 }
 
 /**
-* @brief Creates a deep copy of the MutableFeatures
-*
-* @return Pointer to new MutableFeatures with copied values
-*
-* All values are deep-copied to ensure the copy is independent.
+ * @brief Creates a deep copy of the MutableFeatures
+ *
+ * @return Pointer to new MutableFeatures with copied values
+ *
+ * All values are deep-copied to ensure the copy is independent.
+ * This includes deep copying of slices and strings using strings.Clone.
  */
 func (f *MutableFeatures) Clone() *MutableFeatures {
 	clone := NewMutableFeatures()
@@ -476,17 +421,18 @@ func (f *MutableFeatures) Clone() *MutableFeatures {
 // Feature implementations with embedded error handling
 
 /**
-* @brief ErrorFeature provides default error implementations for all Feature methods
-*
-* This struct is embedded in concrete feature types to provide default error
-* responses for methods that don't apply to the specific type.
+ * @brief ErrorFeature provides default error implementations for all Feature methods
+ *
+ * This struct is embedded in concrete feature types to provide default error
+ * responses for methods that don't apply to the specific type. This follows
+ * the composition pattern to avoid code duplication.
  */
 type ErrorFeature struct{}
 
 /**
-* @brief Returns InvalidType for error features
-*
-* @return InvalidType
+ * @brief Returns InvalidType for error features
+ *
+ * @return InvalidType
  */
 func (f *ErrorFeature) Type() DataType {
 	return InvalidType
@@ -495,68 +441,122 @@ func (f *ErrorFeature) Type() DataType {
 /**
  * @brief Retrieves the stored value as any type
  *
- * @return The underlying value as any type
+ * @return nil for error features
  */
 func (f *ErrorFeature) Get() any {
 	return nil
 }
 
 /**
-* @brief Default error implementation for GetInt64
-*
-* @return Zero value and ErrNotImplemented error
+ * @brief Default error implementation for GetInt64
+ *
+ * @return Zero value and ErrNotImplemented error
  */
 func (f *ErrorFeature) GetInt64() (int64, error) {
 	return 0, ErrNotImplemented
 }
 
 /**
-* @brief Default error implementation for GetFloat32
-*
-* @return Zero value and ErrNotImplemented error
+ * @brief Default unsafe implementation for GetInt64Unsafe
+ *
+ * @return Zero value
+ */
+func (f *ErrorFeature) GetInt64Unsafe() int64 {
+	return 0
+}
+
+/**
+ * @brief Default error implementation for GetFloat32
+ *
+ * @return Zero value and ErrNotImplemented error
  */
 func (f *ErrorFeature) GetFloat32() (float32, error) {
 	return 0.0, ErrNotImplemented
 }
 
 /**
-* @brief Default error implementation for GetString
-*
-* @return Empty string and ErrNotImplemented error
+ * @brief Default unsafe implementation for GetFloat32Unsafe
+ *
+ * @return Zero value
+ */
+func (f *ErrorFeature) GetFloat32Unsafe() float32 {
+	return 0.0
+}
+
+/**
+ * @brief Default error implementation for GetString
+ *
+ * @return Empty string and ErrNotImplemented error
  */
 func (f *ErrorFeature) GetString() (string, error) {
 	return "", ErrNotImplemented
 }
 
 /**
-* @brief Default error implementation for GetInt64s
-*
-* @return Nil slice and ErrNotImplemented error
+ * @brief Default unsafe implementation for GetStringUnsafe
+ *
+ * @return Empty string
+ */
+func (f *ErrorFeature) GetStringUnsafe() string {
+	return ""
+}
+
+/**
+ * @brief Default error implementation for GetInt64s
+ *
+ * @return Nil slice and ErrNotImplemented error
  */
 func (f *ErrorFeature) GetInt64s() ([]int64, error) {
 	return nil, ErrNotImplemented
 }
 
 /**
-* @brief Default error implementation for GetFloat32s
-*
-* @return Nil slice and ErrNotImplemented error
+ * @brief Default unsafe implementation for GetInt64sUnsafe
+ *
+ * @return Nil slice
+ */
+func (f *ErrorFeature) GetInt64sUnsafe() []int64 {
+	return nil
+}
+
+/**
+ * @brief Default error implementation for GetFloat32s
+ *
+ * @return Nil slice and ErrNotImplemented error
  */
 func (f *ErrorFeature) GetFloat32s() ([]float32, error) {
 	return nil, ErrNotImplemented
 }
 
 /**
-* @brief Default error implementation for GetStrings
-*
-* @return Nil slice and ErrNotImplemented error
+ * @brief Default unsafe implementation for GetFloat32sUnsafe
+ *
+ * @return Nil slice
+ */
+func (f *ErrorFeature) GetFloat32sUnsafe() []float32 {
+	return nil
+}
+
+/**
+ * @brief Default error implementation for GetStrings
+ *
+ * @return Nil slice and ErrNotImplemented error
  */
 func (f *ErrorFeature) GetStrings() ([]string, error) {
 	return nil, ErrNotImplemented
 }
 
 /**
-* @brief Int64 feature stores a 64-bit signed integer value
+ * @brief Default unsafe implementation for GetStringsUnsafe
+ *
+ * @return Nil slice
+ */
+func (f *ErrorFeature) GetStringsUnsafe() []string {
+	return nil
+}
+
+/**
+ * @brief Int64 feature stores a 64-bit signed integer value
  */
 type Int64 struct {
 	ErrorFeature
@@ -564,9 +564,9 @@ type Int64 struct {
 }
 
 /**
-* @brief Returns Int64Type
-*
-* @return Int64Type
+ * @brief Returns Int64Type
+ *
+ * @return Int64Type
  */
 func (f *Int64) Type() DataType {
 	return Int64Type
@@ -575,23 +575,32 @@ func (f *Int64) Type() DataType {
 /**
  * @brief Retrieves the stored value as any type
  *
- * @return The underlying value as any type
+ * @return The underlying int64 value as any type
  */
 func (f *Int64) Get() any {
 	return f.Value
 }
 
 /**
-* @brief Retrieves the stored int64 value
-*
-* @return The int64 value and nil error
+ * @brief Retrieves the stored int64 value
+ *
+ * @return The int64 value and nil error
  */
 func (f *Int64) GetInt64() (int64, error) {
 	return f.Value, nil
 }
 
 /**
-* @brief Int64s feature stores a slice of 64-bit signed integers
+ * @brief Retrieves the stored int64 value without error checking
+ *
+ * @return The int64 value
+ */
+func (f *Int64) GetInt64Unsafe() int64 {
+	return f.Value
+}
+
+/**
+ * @brief Int64s feature stores a slice of 64-bit signed integers
  */
 type Int64s struct {
 	ErrorFeature
@@ -599,9 +608,9 @@ type Int64s struct {
 }
 
 /**
-* @brief Returns Int64sType
-*
-* @return Int64sType
+ * @brief Returns Int64sType
+ *
+ * @return Int64sType
  */
 func (f *Int64s) Type() DataType {
 	return Int64sType
@@ -610,23 +619,32 @@ func (f *Int64s) Type() DataType {
 /**
  * @brief Retrieves the stored value as any type
  *
- * @return The underlying value as any type
+ * @return The underlying []int64 slice as any type
  */
 func (f *Int64s) Get() any {
 	return f.Value
 }
 
 /**
-* @brief Retrieves the stored int64 slice
-*
-* @return The int64 slice and nil error
+ * @brief Retrieves the stored int64 slice
+ *
+ * @return The int64 slice and nil error
  */
 func (f *Int64s) GetInt64s() ([]int64, error) {
 	return f.Value, nil
 }
 
 /**
-* @brief Float32 feature stores a 32-bit floating point value
+ * @brief Retrieves the stored int64 slice without error checking
+ *
+ * @return The int64 slice
+ */
+func (f *Int64s) GetInt64sUnsafe() []int64 {
+	return f.Value
+}
+
+/**
+ * @brief Float32 feature stores a 32-bit floating point value
  */
 type Float32 struct {
 	ErrorFeature
@@ -634,9 +652,9 @@ type Float32 struct {
 }
 
 /**
-* @brief Returns Float32Type
-*
-* @return Float32Type
+ * @brief Returns Float32Type
+ *
+ * @return Float32Type
  */
 func (f *Float32) Type() DataType {
 	return Float32Type
@@ -645,23 +663,32 @@ func (f *Float32) Type() DataType {
 /**
  * @brief Retrieves the stored value as any type
  *
- * @return The underlying value as any type
+ * @return The underlying float32 value as any type
  */
 func (f *Float32) Get() any {
 	return f.Value
 }
 
 /**
-* @brief Retrieves the stored float32 value
-*
-* @return The float32 value and nil error
+ * @brief Retrieves the stored float32 value
+ *
+ * @return The float32 value and nil error
  */
 func (f *Float32) GetFloat32() (float32, error) {
 	return f.Value, nil
 }
 
 /**
-* @brief Float32s feature stores a slice of 32-bit floating point values
+ * @brief Retrieves the stored float32 value without error checking
+ *
+ * @return The float32 value
+ */
+func (f *Float32) GetFloat32Unsafe() float32 {
+	return f.Value
+}
+
+/**
+ * @brief Float32s feature stores a slice of 32-bit floating point values
  */
 type Float32s struct {
 	ErrorFeature
@@ -669,9 +696,9 @@ type Float32s struct {
 }
 
 /**
-* @brief Returns Float32sType
-*
-* @return Float32sType
+ * @brief Returns Float32sType
+ *
+ * @return Float32sType
  */
 func (f *Float32s) Type() DataType {
 	return Float32sType
@@ -680,23 +707,32 @@ func (f *Float32s) Type() DataType {
 /**
  * @brief Retrieves the stored value as any type
  *
- * @return The underlying value as any type
+ * @return The underlying []float32 slice as any type
  */
 func (f *Float32s) Get() any {
 	return f.Value
 }
 
 /**
-* @brief Retrieves the stored float32 slice
-*
-* @return The float32 slice and nil error
+ * @brief Retrieves the stored float32 slice
+ *
+ * @return The float32 slice and nil error
  */
 func (f *Float32s) GetFloat32s() ([]float32, error) {
 	return f.Value, nil
 }
 
 /**
-* @brief String feature stores a UTF-8 string value
+ * @brief Retrieves the stored float32 slice without error checking
+ *
+ * @return The float32 slice
+ */
+func (f *Float32s) GetFloat32sUnsafe() []float32 {
+	return f.Value
+}
+
+/**
+ * @brief String feature stores a UTF-8 string value
  */
 type String struct {
 	ErrorFeature
@@ -704,9 +740,9 @@ type String struct {
 }
 
 /**
-* @brief Returns StringType
-*
-* @return StringType
+ * @brief Returns StringType
+ *
+ * @return StringType
  */
 func (f *String) Type() DataType {
 	return StringType
@@ -715,23 +751,32 @@ func (f *String) Type() DataType {
 /**
  * @brief Retrieves the stored value as any type
  *
- * @return The underlying value as any type
+ * @return The underlying string value as any type
  */
 func (f *String) Get() any {
 	return f.Value
 }
 
 /**
-* @brief Retrieves the stored string value
-*
-* @return The string value and nil error
+ * @brief Retrieves the stored string value
+ *
+ * @return The string value and nil error
  */
 func (f *String) GetString() (string, error) {
 	return f.Value, nil
 }
 
 /**
-* @brief Strings feature stores a slice of UTF-8 strings
+ * @brief Retrieves the stored string value without error checking
+ *
+ * @return The string value
+ */
+func (f *String) GetStringUnsafe() string {
+	return f.Value
+}
+
+/**
+ * @brief Strings feature stores a slice of UTF-8 strings
  */
 type Strings struct {
 	ErrorFeature
@@ -739,9 +784,9 @@ type Strings struct {
 }
 
 /**
-* @brief Returns StringsType
-*
-* @return StringsType
+ * @brief Returns StringsType
+ *
+ * @return StringsType
  */
 func (f *Strings) Type() DataType {
 	return StringsType
@@ -750,65 +795,88 @@ func (f *Strings) Type() DataType {
 /**
  * @brief Retrieves the stored value as any type
  *
- * @return The underlying value as any type
+ * @return The underlying []string slice as any type
  */
 func (f *Strings) Get() any {
 	return f.Value
 }
 
 /**
-* @brief Retrieves the stored string slice
-*
-* @return The string slice and nil error
+ * @brief Retrieves the stored string slice
+ *
+ * @return The string slice and nil error
  */
 func (f *Strings) GetStrings() ([]string, error) {
 	return f.Value, nil
 }
 
+/**
+ * @brief Retrieves the stored string slice without error checking
+ *
+ * @return The string slice
+ */
+func (f *Strings) GetStringsUnsafe() []string {
+	return f.Value
+}
+
 // Helper functions
 
 /**
-* @brief Creates a Feature from any supported value type
-*
-* @param value The value to convert to a Feature
-* @return Feature implementation and error if type unsupported
+ * @brief Creates a Feature from any supported value type
+ *
+ * @param value The value to convert to a Feature
+ * @return Feature implementation
+ *
+ * Supported types:
+ * - int, int64: converted to Int64 feature
+ * - float32, float64: converted to Float32 feature (float64 truncated to float32)
+ * - string: converted to String feature
+ * - []int, []int64: converted to Int64s feature
+ * - []float32, []float64: converted to Float32s feature (float64 truncated to float32)
+ * - []string: converted to Strings feature with deep-copied strings
  */
-func createFeatureFromValue(value any) (Feature, error) {
+func createFeatureFromValue(value any) Feature {
 	switch v := value.(type) {
 	case int64:
-		return &Int64{Value: v}, nil
+		return &Int64{Value: v}
 	case int:
-		return &Int64{Value: int64(v)}, nil
+		return &Int64{Value: int64(v)}
 	case float32:
-		return &Float32{Value: v}, nil
+		return &Float32{Value: v}
 	case float64:
-		return &Float32{Value: float32(v)}, nil
+		return &Float32{Value: float32(v)}
 	case string:
-		return &String{Value: v}, nil
+		return &String{Value: v}
 	case []int64:
-		return &Int64s{Value: v}, nil
+		// Create a copy to ensure independence
+		nums := make([]int64, len(v))
+		copy(nums, v)
+		return &Int64s{Value: nums}
 	case []int:
 		int64s := make([]int64, len(v))
 		for i, val := range v {
 			int64s[i] = int64(val)
 		}
-		return &Int64s{Value: int64s}, nil
+		return &Int64s{Value: int64s}
 	case []float32:
-		return &Float32s{Value: v}, nil
+		// Create a copy to ensure independence
+		nums := make([]float32, len(v))
+		copy(nums, v)
+		return &Float32s{Value: nums}
 	case []float64:
 		float32s := make([]float32, len(v))
 		for i, val := range v {
 			float32s[i] = float32(val)
 		}
-		return &Float32s{Value: float32s}, nil
+		return &Float32s{Value: float32s}
 	case []string:
 		// Deep copy strings to ensure independence
 		strs := make([]string, len(v))
 		for i, s := range v {
 			strs[i] = strings.Clone(s)
 		}
-		return &Strings{Value: strs}, nil
+		return &Strings{Value: strs}
 	default:
-		return nil, fmt.Errorf("unsupported type: %T", value)
+		return nil
 	}
 }

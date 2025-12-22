@@ -304,7 +304,7 @@ func (f *ImmutableFeatures) Keys() []string {
  * @param fn Callback function called for each feature
  * @return Error if callback returns error
  */
-func (f *ImmutableFeatures) ForEach(fn func(key string, feature Feature) error) error {
+func (f *ImmutableFeatures) ForEach(fn IteratorFunc) error {
 	for key, fea := range f.features {
 		if err := fn(key, &fea); err != nil {
 			return err

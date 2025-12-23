@@ -253,6 +253,19 @@ func NewImmutableFeaturesFromMap(data map[string]any, arena *Arena) (*ImmutableF
 }
 
 /**
+ * @brief Gets the data type of a feature by key
+ *
+ * @param key Feature name
+ * @return DataType of the feature, InvalidType if not found
+ */
+func (f *ImmutableFeatures) GetType(key string) DataType {
+	if feature, ok := f.features[key]; ok {
+		return feature.Type()
+	}
+	return InvalidType
+}
+
+/**
  * @brief Retrieves a feature by name
  *
  * @param key Feature name

@@ -3,6 +3,7 @@ package dmutex
 import (
 	"context"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/uopensail/ulib/prome"
@@ -12,34 +13,33 @@ import (
 	"go.uber.org/zap"
 )
 
-// DMutexEtcd provides a distributed mutex implementation using etcd
+// DMutexEtcd provides a distributed mutex backed by etcd. It is safe for
+// concurrent use: the internal session is lazily created under mu.
 type DMutexEtcd struct {
+	mu      sync.Mutex
 	c       *etcdclient.Client
 	cess    *concurrency.Session
-	timeout int // Timeout in seconds
+	timeout int // lock timeout in seconds
 }
 
-// NewDMutexEtcd creates a new distributed mutex instance with etcd backend
-//
-// @param c: etcd client instance
-// @param timeout: lock timeout in seconds, defaults to 10 if <= 0
-// @return: Pointer to initialized DMutexEtcd
+// NewDMutexEtcd returns a new DMutexEtcd using c as the etcd client.
+// timeout is the per-operation deadline in seconds; values ≤ 0 default to 10.
 func NewDMutexEtcd(c *etcdclient.Client, timeout int) *DMutexEtcd {
 	if timeout <= 0 {
 		timeout = 10
 	}
-	m := DMutexEtcd{c: c, timeout: timeout}
-	return &m
+	return &DMutexEtcd{c: c, timeout: timeout}
 }
 
-// init initializes the etcd session if not already created
-//
-// @return: error if session creation fails
+// init lazily creates the etcd session. It is called before every lock
+// operation and is protected by mu to prevent concurrent session creation.
 func (m *DMutexEtcd) init() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.cess == nil {
 		sess, err := concurrency.NewSession(m.c)
 		if err != nil {
-			zlog.LOG.Error("Failed to create etcd session for mutex", zap.Error(err))
+			zlog.LOG.Error("failed to create etcd session", zap.Error(err))
 			return err
 		}
 		m.cess = sess
@@ -47,10 +47,8 @@ func (m *DMutexEtcd) init() error {
 	return nil
 }
 
-// Lock acquires a distributed lock on the specified key prefix
-//
-// @param pfx: The key prefix to lock
-// @return: *concurrency.Mutex and error if lock acquisition fails
+// Lock acquires the distributed lock at pfx, blocking until it is available
+// or the per-operation timeout elapses.
 func (m *DMutexEtcd) Lock(pfx string) (*concurrency.Mutex, error) {
 	stat := prome.NewStat("etcd_lock").MarkErr()
 	defer stat.End()
@@ -63,67 +61,54 @@ func (m *DMutexEtcd) Lock(pfx string) (*concurrency.Mutex, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(m.timeout))
 	defer cancel()
 
-	err := mu.Lock(ctx)
-	if err != nil {
-		zlog.LOG.Error("Failed to acquire distributed lock",
-			zap.String("prefix", pfx),
-			zap.Error(err))
+	if err := mu.Lock(ctx); err != nil {
+		zlog.LOG.Error("failed to acquire distributed lock",
+			zap.String("prefix", pfx), zap.Error(err))
 		return nil, err
 	}
 
 	stat.MarkOk()
-	zlog.LOG.Debug("Successfully acquired distributed lock", zap.String("prefix", pfx))
 	return mu, nil
 }
 
-// Unlock releases the distributed lock
-//
-// @param mu: The mutex to unlock
-// @return: error if unlock operation fails
+// Unlock releases a distributed lock previously acquired by Lock or TryLock.
 func (m *DMutexEtcd) Unlock(mu *concurrency.Mutex) error {
 	stat := prome.NewStat("etcd_unlock").MarkErr()
 	defer stat.End()
 
 	if mu == nil {
-		err := errors.New("mutex is nil")
-		zlog.LOG.Error("Attempted to unlock nil mutex")
-		return err
+		return errors.New("mutex is nil")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(m.timeout))
 	defer cancel()
 
-	err := mu.Unlock(ctx)
-	if err != nil {
-		zlog.LOG.Error("Failed to unlock distributed mutex", zap.Error(err))
+	if err := mu.Unlock(ctx); err != nil {
+		zlog.LOG.Error("failed to unlock distributed mutex", zap.Error(err))
 		return err
 	}
 
 	stat.MarkOk()
-	zlog.LOG.Debug("Successfully released distributed lock")
 	return nil
 }
 
-// Close closes the etcd session and releases resources
-//
-// @return: error if session close fails
+// Close closes the underlying etcd session and releases its lease.
+// After Close, the DMutexEtcd must not be used.
 func (m *DMutexEtcd) Close() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.cess != nil {
-		err := m.cess.Close()
-		if err != nil {
-			zlog.LOG.Error("Failed to close etcd session", zap.Error(err))
+		if err := m.cess.Close(); err != nil {
+			zlog.LOG.Error("failed to close etcd session", zap.Error(err))
 			return err
 		}
 		m.cess = nil
-		zlog.LOG.Debug("Successfully closed etcd session")
 	}
 	return nil
 }
 
-// TryLock attempts to acquire a lock with immediate return if lock is unavailable
-//
-// @param pfx: The key prefix to lock
-// @return: *concurrency.Mutex and error if lock acquisition fails or lock is unavailable
+// TryLock tries to acquire the distributed lock at pfx, returning
+// concurrency.ErrLocked immediately if another holder owns it.
 func (m *DMutexEtcd) TryLock(pfx string) (*concurrency.Mutex, error) {
 	stat := prome.NewStat("etcd_try_lock").MarkErr()
 	defer stat.End()
@@ -136,21 +121,14 @@ func (m *DMutexEtcd) TryLock(pfx string) (*concurrency.Mutex, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(m.timeout))
 	defer cancel()
 
-	err := mu.TryLock(ctx)
-	if err != nil {
-		if errors.Is(err, concurrency.ErrLocked) {
-			zlog.LOG.Debug("Distributed lock is already acquired by another client",
-				zap.String("prefix", pfx))
-		} else {
-			zlog.LOG.Error("Failed to try acquire distributed lock",
-				zap.String("prefix", pfx),
-				zap.Error(err))
+	if err := mu.TryLock(ctx); err != nil {
+		if !errors.Is(err, concurrency.ErrLocked) {
+			zlog.LOG.Error("failed to try-acquire distributed lock",
+				zap.String("prefix", pfx), zap.Error(err))
 		}
 		return nil, err
 	}
 
 	stat.MarkOk()
-	zlog.LOG.Debug("Successfully acquired distributed lock with TryLock",
-		zap.String("prefix", pfx))
 	return mu, nil
 }

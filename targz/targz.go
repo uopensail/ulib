@@ -1,37 +1,41 @@
-// Package targz contains methods to create and extract tar gz archives.
+// Package targz provides methods to create and extract tar.gz archives.
 //
-// Usage (discarding potential errors):
+// Usage:
 //
 //	targz.Compress("path/to/the/directory/to/compress", "my_archive.tar.gz")
 //	targz.Extract("my_archive.tar.gz", "directory/to/extract/to")
 //
-// This creates an archive in ./my_archive.tar.gz with the folder "compress" (last in the path).
-// And extracts the folder "compress" to "directory/to/extract/to/". The folder structure is created if it doesn't exist.
+// Compress creates an archive at my_archive.tar.gz containing the last
+// directory component of inputFilePath. Extract restores that directory
+// under the given output path, creating any missing parent directories.
 package targz
 
 import (
 	"archive/tar"
-	"bufio"
 	"compress/gzip"
 	"errors"
+	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"syscall"
 )
 
-// Compress creates a archive from the folder inputFilePath points to in the file outputFilePath points to.
-// Only adds the last directory in inputFilePath to the archive, not the whole path.
-// It tries to create the directory structure outputFilePath contains if it doesn't exist.
-// It returns potential errors to be checked or nil if everything works.
+// Compress creates a .tar.gz archive from the directory at inputFilePath and
+// writes it to outputFilePath. Only the last directory component of
+// inputFilePath is stored in the archive, not the full path. Parent
+// directories of outputFilePath are created if they do not exist. On failure
+// any newly created output directories are removed to leave the filesystem
+// clean.
 func Compress(inputFilePath, outputFilePath string) (err error) {
 	inputFilePath = stripTrailingSlashes(inputFilePath)
 	inputFilePath, outputFilePath, err = makeAbsolute(inputFilePath, outputFilePath)
 	if err != nil {
 		return err
 	}
+
 	undoDir, err := mkdirAll(filepath.Dir(outputFilePath), 0755)
 	if err != nil {
 		return err
@@ -42,23 +46,19 @@ func Compress(inputFilePath, outputFilePath string) (err error) {
 		}
 	}()
 
-	err = compress(inputFilePath, outputFilePath, filepath.Dir(inputFilePath))
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return compress(inputFilePath, outputFilePath, filepath.Dir(inputFilePath))
 }
 
-// Extract extracts a archive from the file inputFilePath points to in the directory outputFilePath points to.
-// It tries to create the directory structure outputFilePath contains if it doesn't exist.
-// It returns potential errors to be checked or nil if everything works.
+// Extract unpacks the .tar.gz archive at inputFilePath into the directory
+// outputFilePath. Missing parent directories are created automatically. On
+// failure any newly created output directories are removed.
 func Extract(inputFilePath, outputFilePath string) (err error) {
 	outputFilePath = stripTrailingSlashes(outputFilePath)
 	inputFilePath, outputFilePath, err = makeAbsolute(inputFilePath, outputFilePath)
 	if err != nil {
 		return err
 	}
+
 	undoDir, err := mkdirAll(outputFilePath, 0755)
 	if err != nil {
 		return err
@@ -72,30 +72,31 @@ func Extract(inputFilePath, outputFilePath string) (err error) {
 	return extract(inputFilePath, outputFilePath)
 }
 
-// Creates all directories with os.MakedirAll and returns a function to remove the first created directory so cleanup is possible.
+// mkdirAll creates dirPath and all necessary parents with the given
+// permissions. It returns a cleanup function that removes the first
+// directory component that was newly created, so callers can undo the
+// creation on error. If the directory already exists the returned function
+// is a no-op.
 func mkdirAll(dirPath string, perm os.FileMode) (func(), error) {
 	var undoDir string
 
 	for p := dirPath; ; p = path.Dir(p) {
 		finfo, err := os.Stat(p)
-
 		if err == nil {
 			if finfo.IsDir() {
 				break
 			}
-
+			// p exists but is not a directory; check via Lstat in case it
+			// is a symlink pointing to a directory.
 			finfo, err = os.Lstat(p)
 			if err != nil {
 				return nil, err
 			}
-
 			if finfo.IsDir() {
 				break
 			}
-
 			return nil, &os.PathError{Op: "mkdirAll", Path: p, Err: syscall.ENOTDIR}
 		}
-
 		if os.IsNotExist(err) {
 			undoDir = p
 		} else {
@@ -114,39 +115,34 @@ func mkdirAll(dirPath string, perm os.FileMode) (func(), error) {
 	return func() { os.RemoveAll(undoDir) }, nil
 }
 
-// Remove trailing slash if any.
-func stripTrailingSlashes(path string) string {
-	if len(path) > 0 && path[len(path)-1] == '/' {
-		path = path[0 : len(path)-1]
-	}
-
-	return path
+// stripTrailingSlashes removes a single trailing slash from path if present.
+func stripTrailingSlashes(p string) string {
+	return strings.TrimRight(p, "/")
 }
 
-// Make input and output paths absolute.
+// makeAbsolute converts both paths to absolute form using filepath.Abs.
 func makeAbsolute(inputFilePath, outputFilePath string) (string, string, error) {
-	inputFilePath, err := filepath.Abs(inputFilePath)
-	if err == nil {
-		outputFilePath, err = filepath.Abs(outputFilePath)
+	absIn, err := filepath.Abs(inputFilePath)
+	if err != nil {
+		return inputFilePath, outputFilePath, err
 	}
-
-	return inputFilePath, outputFilePath, err
+	absOut, err := filepath.Abs(outputFilePath)
+	return absIn, absOut, err
 }
 
-// The main interaction with tar and gzip. Creates a archive and recursivly adds all files in the directory.
-// The finished archive contains just the directory added, not any parents.
-// This is possible by giving the whole path exept the final directory in subPath.
+// compress creates the .tar.gz archive. subPath is stripped from each file's
+// path so the archive contains paths relative to the directory being
+// compressed. The output file is removed if any error occurs after creation.
 func compress(inPath, outFilePath, subPath string) (err error) {
-	files, err := ioutil.ReadDir(inPath)
+	entries, err := os.ReadDir(inPath)
 	if err != nil {
 		return err
 	}
-
-	if len(files) == 0 {
+	if len(entries) == 0 {
 		return errors.New("targz: input directory is empty")
 	}
 
-	file, err := os.Create(outFilePath)
+	outFile, err := os.Create(outFilePath)
 	if err != nil {
 		return err
 	}
@@ -156,82 +152,73 @@ func compress(inPath, outFilePath, subPath string) (err error) {
 		}
 	}()
 
-	gzipWriter := gzip.NewWriter(file)
+	// Layer writers: file → gzip → tar
+	gzipWriter := gzip.NewWriter(outFile)
 	tarWriter := tar.NewWriter(gzipWriter)
 
-	err = writeDirectory(inPath, tarWriter, subPath)
-	if err != nil {
+	if err = writeDirectory(inPath, tarWriter, subPath); err != nil {
 		return err
 	}
-
-	err = tarWriter.Close()
-	if err != nil {
+	// Close in reverse order; errors from Close matter for gzip flush.
+	if err = tarWriter.Close(); err != nil {
 		return err
 	}
-
-	err = gzipWriter.Close()
-	if err != nil {
+	if err = gzipWriter.Close(); err != nil {
 		return err
 	}
-
-	err = file.Close()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return outFile.Close()
 }
 
-// Read a directy and write it to the tar writer. Recursive function that writes all sub folders.
+// writeDirectory recursively walks directory and writes every file it
+// contains to tarWriter. subPath is used to compute archive-relative names.
 func writeDirectory(directory string, tarWriter *tar.Writer, subPath string) error {
-	files, err := os.ReadDir(directory)
+	entries, err := os.ReadDir(directory)
 	if err != nil {
 		return err
 	}
 
-	for _, file := range files {
-		currentPath := filepath.Join(directory, file.Name())
-		if file.IsDir() {
-			err := writeDirectory(currentPath, tarWriter, subPath)
-			if err != nil {
+	for _, entry := range entries {
+		currentPath := filepath.Join(directory, entry.Name())
+		if entry.IsDir() {
+			if err := writeDirectory(currentPath, tarWriter, subPath); err != nil {
 				return err
 			}
-		} else {
-			info, err := file.Info()
-			if err != nil {
-				return err
-			}
-			err = writeTarGz(currentPath, tarWriter, info, subPath)
-			if err != nil {
-				return err
-			}
-
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		if err := writeTarGz(currentPath, tarWriter, info, subPath); err != nil {
+			return err
 		}
 	}
-
 	return nil
 }
 
-// Write path without the prefix in subPath to tar writer.
-func writeTarGz(path string, tarWriter *tar.Writer, fileInfo os.FileInfo, subPath string) error {
-	file, err := os.Open(path)
+// writeTarGz writes a single file to tarWriter. The header name is the file's
+// absolute path with subPath stripped from the front, producing an
+// archive-relative path. Symlinks are resolved to determine the link target
+// stored in the header.
+func writeTarGz(filePath string, tarWriter *tar.Writer, fileInfo os.FileInfo, subPath string) error {
+	file, err := os.Open(filePath)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	evaledPath, err := filepath.EvalSymlinks(path)
+	evaledPath, err := filepath.EvalSymlinks(filePath)
+	if err != nil {
+		return err
+	}
+	evaledSub, err := filepath.EvalSymlinks(subPath)
 	if err != nil {
 		return err
 	}
 
-	subPath, err = filepath.EvalSymlinks(subPath)
-	if err != nil {
-		return err
-	}
-
+	// link is non-empty only when filePath itself is a symlink.
 	link := ""
-	if evaledPath != path {
+	if evaledPath != filePath {
 		link = evaledPath
 	}
 
@@ -239,30 +226,36 @@ func writeTarGz(path string, tarWriter *tar.Writer, fileInfo os.FileInfo, subPat
 	if err != nil {
 		return err
 	}
-	header.Name = evaledPath[len(subPath):]
 
-	err = tarWriter.WriteHeader(header)
-	if err != nil {
+	// Ensure evaledPath starts with evaledSub before slicing to avoid
+	// a panic or garbled name on unexpected filesystem layouts.
+	if !strings.HasPrefix(evaledPath, evaledSub) {
+		return fmt.Errorf("targz: file path %q is not under sub path %q", evaledPath, evaledSub)
+	}
+	header.Name = evaledPath[len(evaledSub):]
+
+	if err = tarWriter.WriteHeader(header); err != nil {
 		return err
 	}
 
 	_, err = io.Copy(tarWriter, file)
-	if err != nil {
-		return err
-	}
-
 	return err
 }
 
-// Extract the file in filePath to directory.
-func extract(filePath string, directory string) error {
+// extract decompresses the .tar.gz archive at filePath into directory.
+// Each entry's parent directories are created as needed. Files are written
+// with a buffered writer for efficiency and closed explicitly so that any
+// flush error is returned to the caller rather than silently lost.
+func extract(filePath, directory string) error {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	gzipReader, err := gzip.NewReader(bufio.NewReader(file))
+	// gzip.NewReader performs its own buffering; an extra bufio layer is
+	// unnecessary and only adds overhead.
+	gzipReader, err := gzip.NewReader(file)
 	if err != nil {
 		return err
 	}
@@ -279,48 +272,41 @@ func extract(filePath string, directory string) error {
 			return err
 		}
 
-		fileInfo := header.FileInfo()
-		dir := filepath.Join(directory, filepath.Dir(header.Name))
-		filename := filepath.Join(dir, fileInfo.Name())
+		// Guard against path traversal attacks ("../../../etc/passwd" style).
+		cleanName := filepath.Clean(header.Name)
+		if strings.HasPrefix(cleanName, "..") {
+			return fmt.Errorf("targz: illegal file path in archive: %q", header.Name)
+		}
 
-		err = os.MkdirAll(dir, 0755)
-		if err != nil {
+		targetDir := filepath.Join(directory, filepath.Dir(cleanName))
+		targetPath := filepath.Join(targetDir, filepath.Base(cleanName))
+
+		if err = os.MkdirAll(targetDir, 0755); err != nil {
 			return err
 		}
 
-		file, err := os.Create(filename)
-		if err != nil {
-			return err
-		}
-
-		writer := bufio.NewWriter(file)
-
-		buffer := make([]byte, 4096)
-		for {
-			n, err := tarReader.Read(buffer)
-			if err != nil && err != io.EOF {
-				panic(err)
-			}
-			if n == 0 {
-				break
-			}
-
-			_, err = writer.Write(buffer[:n])
-			if err != nil {
-				return err
-			}
-		}
-
-		err = writer.Flush()
-		if err != nil {
-			return err
-		}
-
-		err = file.Close()
-		if err != nil {
+		if err = extractFile(tarReader, targetPath, header.FileInfo().Mode()); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// extractFile writes the current tar entry from r into a new file at path
+// with the given permission bits. The file is closed explicitly so that
+// bufio.Writer.Flush errors are propagated correctly.
+func extractFile(r io.Reader, path string, mode os.FileMode) (err error) {
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if cerr := f.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
+
+	_, err = io.Copy(f, r)
+	return err
 }

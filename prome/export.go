@@ -17,9 +17,8 @@ var (
 )
 
 // ServerExporter handles the collection and export of server performance metrics
+// as Prometheus descriptors. It is meant to be embedded in Exporter.
 type ServerExporter struct {
-	httpServer *http.Server
-
 	maxCostTime *prometheus.Desc
 	avgCounter  *prometheus.Desc
 	p90CostTime *prometheus.Desc
@@ -30,10 +29,8 @@ type ServerExporter struct {
 	costBucket  *prometheus.Desc
 }
 
-// NewServerExporter creates a new ServerExporter instance with the specified namespace
-//
-// @param namespace: The namespace for Prometheus metrics
-// @return: Pointer to initialized ServerExporter
+// NewServerExporter creates a new ServerExporter with metrics descriptors
+// under namespace.
 func NewServerExporter(namespace string) *ServerExporter {
 	serverE := ServerExporter{
 		maxCostTime: newServerDesc(namespace, "max_cost_time", "Max Cost Time"),
@@ -63,20 +60,17 @@ func (serverE *ServerExporter) Describe(ch chan<- *prometheus.Desc) {
 }
 
 // Exporter combines ServerExporter with additional exporter-specific metrics
+// and owns the HTTP server that exposes the /metrics endpoint.
 type Exporter struct {
 	ServerExporter
-	port int
-
+	httpServer   *http.Server
+	port         int
 	up           prometheus.Gauge
 	totalScrapes prometheus.Counter
 }
 
-// newServerDesc creates a new Prometheus descriptor with the given parameters
-//
-// @param namespace: Metric namespace
-// @param metricName: Name of the metric
-// @param docString: Help text describing the metric
-// @return: Prometheus descriptor
+// newServerDesc creates a new Prometheus descriptor with the given namespace,
+// metric name, and help text.
 func newServerDesc(namespace, metricName string, docString string) *prometheus.Desc {
 	return prometheus.NewDesc(
 		fmt.Sprintf("%s_%s", namespace, metricName),
@@ -86,10 +80,7 @@ func newServerDesc(namespace, metricName string, docString string) *prometheus.D
 	)
 }
 
-// NewExporter creates a new Exporter instance with the specified namespace
-//
-// @param namespace: The namespace for Prometheus metrics
-// @return: Pointer to initialized Exporter
+// NewExporter creates a new Exporter with metrics descriptors under namespace.
 func NewExporter(namespace string) *Exporter {
 	export := Exporter{
 		up: prometheus.NewGauge(prometheus.GaugeOpts{
@@ -172,10 +163,8 @@ func (exporter *Exporter) scrape(ch chan<- prometheus.Metric) {
 	}
 }
 
-// Start begins the Prometheus metrics HTTP server on the specified port
-//
-// @param port: The port number to listen on
-// @return: error if the server fails to start
+// Start registers the exporter with Prometheus and begins serving the
+// /metrics endpoint on the given port. It blocks until the server stops.
 func (exporter *Exporter) Start(port int) error {
 	// Fixed bug: Check if exporter is already registered
 	if !prometheus.Unregister(exporter) {

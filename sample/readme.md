@@ -1,246 +1,210 @@
-# Sample - High-Performance Feature Storage System
+# sample — High-Performance Feature Storage
 
-A Go library providing efficient, type-safe storage and access for heterogeneous data features with both mutable and immutable implementations.
+A Go package providing type-safe, arena-backed storage for heterogeneous data
+features. Two complementary types cover the full read/write spectrum:
 
-## Overview
+- **`ImmutableFeatures`** — zero-copy, arena-allocated; safe for concurrent reads.
+- **`MutableFeatures`** — heap-allocated map; supports add / update / delete.
 
-This library offers two complementary approaches to feature storage:
-- **ImmutableFeatures**: Zero-copy, arena-allocated storage for high-performance read operations
-- **MutableFeatures**: Traditional map-based storage for flexible data manipulation
+Requires **Go 1.26** or later.
 
-## Key Features
+## Supported types
 
-- 🚀 **Zero-copy access** for immutable features
-- 🔒 **Type safety** with runtime type checking
-- 🧠 **Memory efficient** with custom arena allocation
-- 🔄 **Bidirectional conversion** between mutable and immutable forms
-- 📦 **JSON serialization** support
-- ⚡ **High performance** with 8-byte memory alignment
-- 🛡️ **Go 1.20+ optimized** using latest unsafe operations
+| `DataType` constant | Value | Go type |
+|---|---|---|
+| `Int64Type` | 0 | `int64` |
+| `Float32Type` | 1 | `float32` |
+| `StringType` | 2 | `string` |
+| `Int64sType` | 3 | `[]int64` |
+| `Float32sType` | 4 | `[]float32` |
+| `StringsType` | 5 | `[]string` |
 
-## Supported Data Types
-
-| Type | Description | Storage |
-|------|-------------|---------|
-| `Int64Type` | 64-bit signed integer | `int64` |
-| `Float32Type` | 32-bit floating point | `float32` |
-| `StringType` | UTF-8 string | `string` |
-| `Int64sType` | Integer array | `[]int64` |
-| `Float32sType` | Float array | `[]float32` |
-| `StringsType` | String array | `[]string` |
-
-## Architecture
-
-### Feature Interface
-
-All feature types implement a common interface:
+## Core interfaces
 
 ```go
+// Feature holds one typed value.
 type Feature interface {
-    Type() DataType                    // Returns the data type of this feature
-    Get() any                          // Retrieves value
-    GetInt64() (int64, error)          // Retrieves int64 value
-    GetFloat32() (float32, error)      // Retrieves float32 value  
-    GetString() (string, error)        // Retrieves string value
-    GetInt64s() ([]int64, error)       // Retrieves int64 slice
-    GetFloat32s() ([]float32, error)   // Retrieves float32 slice
-    GetStrings() ([]string, error)     // Retrieves string slice
+    Type() DataType
+
+    Get() any
+
+    GetInt64() (int64, error)
+    GetInt64Unsafe() int64
+
+    GetFloat32() (float32, error)
+    GetFloat32Unsafe() float32
+
+    GetString() (string, error)
+    GetStringUnsafe() string
+
+    GetInt64s() ([]int64, error)
+    GetInt64sUnsafe() []int64
+
+    GetFloat32s() ([]float32, error)
+    GetFloat32sUnsafe() []float32
+
+    GetStrings() ([]string, error)
+    GetStringsUnsafe() []string
 }
-```
 
-### Features Collection Interface
-
-Both mutable and immutable collections provide:
-
-```go
+// Features is the common interface for both collection types.
 type Features interface {
-    Keys() []string                    // Returns all feature keys
-    Get(string) Feature                // Retrieves feature by key
-    Len() int                         // Returns number of features
-    Has(string) bool                  // Checks if key exists
-    MarshalJSON() ([]byte, error)     // JSON serialization
-    UnmarshalJSON([]byte) error       // JSON deserialization
+    GetType(key string) DataType
+    Keys() []string
+    Get(key string) Feature
+    Len() int
+    Has(key string) bool
+    ForEach(fn IteratorFunc) error
+    All() iter.Seq2[string, Feature]   // Go 1.23+ range-over-function
+    MapAny() (map[string]any, error)
+    MarshalJSON() ([]byte, error)
+    UnmarshalJSON(data []byte) error
 }
 ```
+
+The `Unsafe` getters skip the type check and must only be called after
+confirming `feature.Type()`. The safe variants (`GetInt64`, etc.) return
+`ErrTypeMismatch` on a mismatch.
 
 ## ImmutableFeatures
 
-Optimized for read-heavy workloads with zero-copy access and minimal memory overhead.
-
-### Benefits
-- **Zero-copy reads**: Direct pointer access to arena memory
-- **Reduced GC pressure**: Arena allocation minimizes garbage collection
-- **Memory efficiency**: Compact, aligned memory layout
-- **Thread-safe reads**: Immutable data allows concurrent access
-
-### Memory Layout
-
-All data structures use 8-byte alignment for optimal CPU performance:
-
-#### Scalar Types
-```
-Int64:    [DataType:8] + [Value:8] = 16 bytes
-Float32:  [DataType:8] + [Value:4] + [Padding:4] = 16 bytes
-String:   [DataType:8] + [Len:8] + [Data:aligned] = 16 + aligned(len)
-```
-
-#### Array Types
-```
-Int64s:   [DataType:8] + [Len:8] + [Data:len*8] = 16 + len*8 bytes
-Float32s: [DataType:8] + [Len:8] + [Data:aligned(len*4)] = 16 + aligned(len*4) bytes
-Strings:  [DataType:8] + [Len:8] + [StringHeaders:len*16] + [StringData:aligned]
-```
-
-### Usage Example
+### Construction
 
 ```go
-// Create from map
+arena := sample.NewArena()
+
+// From a plain map
 data := map[string]any{
     "user_id": int64(12345),
-    "score": float32(98.5),
-    "name": "John Doe",
-    "tags": []string{"premium", "active"},
+    "score":   float32(98.5),
+    "name":    "Alice",
+    "tags":    []string{"premium", "active"},
 }
-
-features, err := NewImmutableFeaturesFromMap(data, nil)
+features, err := sample.NewImmutableFeaturesFromMap(data, arena)
 if err != nil {
     log.Fatal(err)
 }
 
-// Zero-copy access
-if feature := features.Get("user_id"); feature != nil {
-    userID, _ := feature.GetInt64()
-    fmt.Printf("User ID: %d\n", userID)
+// From MutableFeatures
+mut := sample.NewMutableFeatures()
+mut.SetValue("x", int64(1))
+imm, err := mut.Immutable(arena)
+```
+
+### Reading
+
+```go
+// Single key
+if f := features.Get("user_id"); f != nil {
+    id, _ := f.GetInt64()
+    fmt.Println(id)
 }
 
-// Iterate over all features
-features.ForEach(func(key string, feature Feature) error {
-    fmt.Printf("Key: %s, Type: %s\n", key, feature.Type())
+// Type-switch style (no allocation)
+if features.GetType("score") == sample.Float32Type {
+    v := features.Get("score").GetFloat32Unsafe()
+    fmt.Println(v)
+}
+
+// Callback iteration
+features.ForEach(func(key string, f sample.Feature) error {
+    fmt.Printf("%s: %s\n", key, f.Type())
     return nil
 })
 
-// JSON serialization
-jsonData, _ := features.MarshalJSON()
-fmt.Printf("JSON: %s\n", jsonData)
+// Range-over-function (Go 1.23+)
+for key, f := range features.All() {
+    fmt.Printf("%s: %v\n", key, f.Get())
+}
+```
+
+### JSON round-trip
+
+```go
+data, _ := features.MarshalJSON()
+
+var restored sample.ImmutableFeatures
+_ = restored.UnmarshalJSON(data)
+```
+
+### Memory layout
+
+All values are stored in contiguous arena pages with 8-byte alignment.
+No heap allocation occurs on read.
+
+```
+Int64:    [DataType:8][Value:8]                          = 16 B
+Float32:  [DataType:8][Value:4][Pad:4]                  = 16 B
+String:   [DataType:8][Len:8][Data:align(len)]           = 16 + align(len) B
+Int64s:   [DataType:8][Len:8][Data:len×8]               = 16 + len×8 B
+Float32s: [DataType:8][Len:8][Data:align(len×4)]         = 16 + align(len×4) B
+Strings:  [DataType:8][Len:8][Headers:align(len×16)][Data:…]
 ```
 
 ## MutableFeatures
 
-Traditional map-based storage for scenarios requiring frequent modifications.
-
-### Benefits
-- **Full mutability**: Add, update, and remove features dynamically
-- **Flexible API**: Multiple ways to set and access data
-- **Easy conversion**: Convert to ImmutableFeatures for performance
-- **Standard semantics**: Familiar map-like operations
-
-### Usage Example
-
 ```go
-// Create and populate
-features := NewMutableFeatures()
-features.SetValue("user_id", int64(12345))
-features.SetValue("score", float32(98.5))
+f := sample.NewMutableFeatures()
 
-// Or create from map
-data := map[string]any{
-    "name": "John Doe",
-    "tags": []string{"premium", "active"},
-}
-features, _ := NewMutableFeaturesFromMap(data)
+// Set values
+f.SetValue("user_id", int64(42))
+f.SetValue("score", float32(9.5))
+f.Set("tags", &sample.Strings{Value: []string{"a", "b"}})
 
-// Modify features
-features.SetValue("score", float32(99.0))
-features.Delete("old_key")
+// Get / check
+feat := f.Get("score")           // Feature or nil
+ok   := f.Has("missing")         // false
+dt   := f.GetType("user_id")     // sample.Int64Type
 
-// Convert to immutable for performance
-immutable, _ := features.Immutable(nil)
+// Mutate
+f.SetValue("score", float32(10.0))
+f.Delete("old_key")
 
-// Clone for independent copy
-clone := features.Clone()
+// Deep copy
+clone := f.Clone()
+
+// Promote to immutable
+arena := sample.NewArena()
+imm, err := f.Immutable(arena)
 ```
 
-## Arena Memory Management
-
-The Arena allocator provides efficient memory management for ImmutableFeatures:
+## Arena
 
 ```go
-// Create custom arena
-arena := NewArena()
+arena := sample.NewArena()
 
-// Check memory usage
-fmt.Printf("Total memory: %d bytes\n", arena.Size())
-fmt.Printf("Page count: %d\n", arena.PageCount())
-
-// Use with features
-features, _ := NewImmutableFeaturesFromMap(data, arena)
+fmt.Printf("pages: %d, bytes: %d\n", arena.PageCount(), arena.Size())
 ```
 
-### Arena Benefits
-- **Reduced allocations**: Large chunks allocated upfront
-- **Memory locality**: Related data stored together
-- **Lower GC pressure**: Fewer objects for garbage collector
-- **Alignment**: All allocations are 8-byte aligned
+- Requests ≤ 4 KiB are served from the current page; a fresh page is appended
+  when it fills up.
+- Larger requests receive a dedicated page inserted just before the current one.
+- All allocations are 8-byte aligned.
+- Under Go 1.26's Green Tea GC the Arena remains valuable primarily for
+  **zero-copy access**: strings and slices returned by `ImmutableFeature`
+  point directly into arena pages rather than owning separate heap blocks.
 
-## Performance Characteristics
-
-### ImmutableFeatures
-- **Read access**: O(1) with zero-copy
-- **Memory overhead**: Minimal, only type headers
-- **GC impact**: Very low, arena-allocated
-- **Thread safety**: Read-safe without locks
-
-### MutableFeatures
-- **Read/Write access**: O(1) map operations
-- **Memory overhead**: Standard Go map overhead
-- **GC impact**: Standard Go object lifecycle
-- **Thread safety**: Not thread-safe (external sync required)
-
-## JSON Format
-
-Both feature types use a consistent JSON format:
+## JSON format
 
 ```json
 {
-  "user_id": {
-    "type": 1,
-    "value": 12345
-  },
-  "score": {
-    "type": 2,
-    "value": 98.5
-  },
-  "name": {
-    "type": 3,
-    "value": "John Doe"
-  },
-  "tags": {
-    "type": 6,
-    "value": ["premium", "active"]
-  }
+  "user_id": {"type": 0, "value": 12345},
+  "score":   {"type": 1, "value": 98.5},
+  "name":    {"type": 2, "value": "Alice"},
+  "tags":    {"type": 5, "value": ["premium", "active"]}
 }
 ```
 
-## Best Practices
+Type integers correspond to the `DataType` iota constants (see table above).
 
-### When to Use ImmutableFeatures
-- Read-heavy workloads
-- Large datasets with memory constraints
-- High-performance requirements
-- Concurrent read access needed
+## When to use which
 
-### When to Use MutableFeatures
-- Frequent modifications required
-- Small to medium datasets
-- Prototyping and development
-- Dynamic feature sets
+| Scenario | Recommendation |
+|---|---|
+| Read-heavy, large dataset, concurrent access | `ImmutableFeatures` |
+| Frequent mutations, small dataset | `MutableFeatures` |
+| Build phase → serve phase | Build with `MutableFeatures`, promote with `Immutable()` |
 
-### Memory Optimization
-- Reuse Arena instances when possible
-- Convert MutableFeatures to ImmutableFeatures for read-heavy phases
-- Monitor memory usage with `Arena.Size()`
+## Dependencies
 
-## Requirements
-
-- Go 1.20 or later (for unsafe.Slice and unsafe.String)
-- github.com/bytedance/sonic (for JSON operations)
+- [`github.com/bytedance/sonic`](https://github.com/bytedance/sonic) — JSON encoding/decoding

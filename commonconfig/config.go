@@ -28,7 +28,7 @@ type RegisterDiscoveryConfig struct {
 type ServerConfig struct {
 	HttpServerConfig        `json:",inline" toml:",inline" yaml:",inline"`
 	RegisterDiscoveryConfig `json:"register" toml:"register" yaml:"register"`
-	ServiceEnv              map[string]string `json:"service_env" toml:"service_env" yaml:"service_env"` // Fixed typo: sevice_env -> service_env
+	ServiceEnv              map[string]string `json:"service_env" toml:"service_env" yaml:"service_env"`
 	GRPCPort                int               `json:"grpc_port" toml:"grpc_port" yaml:"grpc_port"`
 	HTTPSPort               int               `json:"https_port" toml:"https_port" yaml:"https_port"`
 	ProjectName             string            `json:"project_name" toml:"project_name" yaml:"project_name"`
@@ -66,8 +66,8 @@ type RedisConfig struct {
 
 // GRPCClientConfig defines configuration for gRPC client connection
 type GRPCClientConfig struct {
-	Url              string `json:"url" toml:"url" yaml:"url"`
-	DialTimeout      int    `json:"dial_timeout" toml:"dial_timeout" yaml:"dial_timeout"` // Fixed typo: dail_timeout -> dial_timeout
+	URL              string `json:"url" toml:"url" yaml:"url"`
+	DialTimeout      int    `json:"dial_timeout" toml:"dial_timeout" yaml:"dial_timeout"`
 	RequestTimeout   int    `json:"request_timeout" toml:"request_timeout" yaml:"request_timeout"`
 	InitConn         int    `json:"init_conn" toml:"init_conn" yaml:"init_conn"`
 	MaxConn          int    `json:"max_conn" toml:"max_conn" yaml:"max_conn"`

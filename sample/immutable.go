@@ -3,41 +3,35 @@ package sample
 import (
 	"encoding/json"
 	"fmt"
+	"iter"
+	"maps"
+	"slices"
 	"strings"
 	"unsafe"
 
 	"github.com/bytedance/sonic"
 )
 
-/**
- * @brief ImmutableFeature represents a read-only typed value stored in arena memory
- *
- * Memory Layout (all 8-byte aligned):
- * - Int64:     [DataType:8] + [Value:8] = 16 bytes
- * - Float32:   [DataType:8] + [Value:4] + [Padding:4] = 16 bytes
- * - String:    [DataType:8] + [Len:8] + [Data:aligned] = 16 + aligned(len)
- * - Int64s:    [DataType:8] + [Len:8] + [Data:len*8] = 16 + len*8 bytes
- * - Float32s:  [DataType:8] + [Len:8] + [Data:aligned(len*4)] = 16 + aligned(len*4) bytes
- * - Strings:   [DataType:8] + [Len:8] + [StringHeaders:len*16] + [StringData:aligned]
- *              = 16 + len*16 + aligned(total_string_length) bytes
- *
- * Key characteristics:
- * - Zero-copy access: All get operations return direct pointers to arena memory
- * - Type safety: DataType field enables runtime type checking
- * - Memory efficiency: Compact layout with proper alignment
- * - Immutable: Data cannot be modified after storage
- *
- * The ptr field points to the beginning of the allocated memory block.
- */
+// ImmutableFeature holds a single typed value stored inside an Arena page.
+// The ptr field points to a contiguous block whose first 8 bytes encode the
+// DataType, followed immediately by the value data.
+//
+// Memory layout per type (all fields 8-byte aligned):
+//
+//	Int64:    [DataType:8][Value:8]                         = 16 B
+//	Float32:  [DataType:8][Value:4][Pad:4]                 = 16 B
+//	String:   [DataType:8][Len:8][Data:align(len)]         = 16+align(len) B
+//	Int64s:   [DataType:8][Len:8][Data:len*8]              = 16+len*8 B
+//	Float32s: [DataType:8][Len:8][Data:align(len*4)]       = 16+align(len*4) B
+//	Strings:  [DataType:8][Len:8][Headers:len*16][Data:…]
+//
+// All slice and string getters return a view directly into the arena — no
+// copying occurs.
 type ImmutableFeature struct {
-	ptr unsafe.Pointer // Pointer to the start of allocated memory
+	ptr unsafe.Pointer
 }
 
-/**
- * @brief Returns the data type of the stored value
- *
- * @return DataType of the stored value, InvalidType if ptr is null
- */
+// Type returns the DataType of the stored value, or InvalidType when ptr is nil.
 func (f *ImmutableFeature) Type() DataType {
 	if f.ptr == nil {
 		return InvalidType
@@ -45,11 +39,7 @@ func (f *ImmutableFeature) Type() DataType {
 	return *(*DataType)(f.ptr)
 }
 
-/**
- * @brief Retrieves the stored value as any type
- *
- * @return The underlying value as any type
- */
+// Get returns the stored value using its native Go type.
 func (f *ImmutableFeature) Get() any {
 	switch f.Type() {
 	case Int64Type:
@@ -68,151 +58,28 @@ func (f *ImmutableFeature) Get() any {
 	return nil
 }
 
-/**
- * @brief Retrieves the stored value as int64
- *
- * @return The int64 value and error if type mismatch
- */
-func (f *ImmutableFeature) GetInt64() (int64, error) {
-	return getInt64(f.ptr)
-}
+func (f *ImmutableFeature) GetInt64() (int64, error)    { return getInt64(f.ptr) }
+func (f *ImmutableFeature) GetInt64Unsafe() int64       { return getInt64Unsafe(f.ptr) }
+func (f *ImmutableFeature) GetFloat32() (float32, error) { return getFloat32(f.ptr) }
+func (f *ImmutableFeature) GetFloat32Unsafe() float32   { return getFloat32Unsafe(f.ptr) }
+func (f *ImmutableFeature) GetString() (string, error)  { return getString(f.ptr) }
+func (f *ImmutableFeature) GetStringUnsafe() string     { return getStringUnsafe(f.ptr) }
+func (f *ImmutableFeature) GetInt64s() ([]int64, error)  { return getInt64s(f.ptr) }
+func (f *ImmutableFeature) GetInt64sUnsafe() []int64    { return getInt64sUnsafe(f.ptr) }
+func (f *ImmutableFeature) GetFloat32s() ([]float32, error) { return getFloat32s(f.ptr) }
+func (f *ImmutableFeature) GetFloat32sUnsafe() []float32 { return getFloat32sUnsafe(f.ptr) }
+func (f *ImmutableFeature) GetStrings() ([]string, error) { return getStrings(f.ptr) }
+func (f *ImmutableFeature) GetStringsUnsafe() []string  { return getStringsUnsafe(f.ptr) }
 
-/**
- * @brief Retrieves the stored value as int64 without type checking
- *
- * @return The int64 value
- *
- * Warning: This function does not perform type checking. Use GetInt64() for type-safe access.
- */
-func (f *ImmutableFeature) GetInt64Unsafe() int64 {
-	return getInt64Unsafe(f.ptr)
-}
-
-/**
- * @brief Retrieves the stored value as float32
- *
- * @return The float32 value and error if type mismatch
- */
-func (f *ImmutableFeature) GetFloat32() (float32, error) {
-	return getFloat32(f.ptr)
-}
-
-/**
- * @brief Retrieves the stored value as float32 without type checking
- *
- * @return The float32 value
- *
- * Warning: This function does not perform type checking. Use GetFloat32() for type-safe access.
- */
-func (f *ImmutableFeature) GetFloat32Unsafe() float32 {
-	return getFloat32Unsafe(f.ptr)
-}
-
-/**
- * @brief Retrieves the stored value as string
- *
- * @return The string value and error if type mismatch
- */
-func (f *ImmutableFeature) GetString() (string, error) {
-	return getString(f.ptr)
-}
-
-/**
- * @brief Retrieves the stored value as string without type checking
- *
- * @return The string value
- *
- * Warning: This function does not perform type checking. Use GetString() for type-safe access.
- */
-func (f *ImmutableFeature) GetStringUnsafe() string {
-	return getStringUnsafe(f.ptr)
-}
-
-/**
- * @brief Retrieves the stored value as []int64
- *
- * @return The []int64 slice and error if type mismatch
- */
-func (f *ImmutableFeature) GetInt64s() ([]int64, error) {
-	return getInt64s(f.ptr)
-}
-
-/**
- * @brief Retrieves the stored value as []int64 without type checking
- *
- * @return The []int64 slice
- *
- * Warning: This function does not perform type checking. Use GetInt64s() for type-safe access.
- */
-func (f *ImmutableFeature) GetInt64sUnsafe() []int64 {
-	return getInt64sUnsafe(f.ptr)
-}
-
-/**
- * @brief Retrieves the stored value as []float32
- *
- * @return The []float32 slice and error if type mismatch
- */
-func (f *ImmutableFeature) GetFloat32s() ([]float32, error) {
-	return getFloat32s(f.ptr)
-}
-
-/**
- * @brief Retrieves the stored value as []float32 without type checking
- *
- * @return The []float32 slice
- *
- * Warning: This function does not perform type checking. Use GetFloat32s() for type-safe access.
- */
-func (f *ImmutableFeature) GetFloat32sUnsafe() []float32 {
-	return getFloat32sUnsafe(f.ptr)
-}
-
-/**
- * @brief Retrieves the stored value as []string
- *
- * @return The []string slice and error if type mismatch
- */
-func (f *ImmutableFeature) GetStrings() ([]string, error) {
-	return getStrings(f.ptr)
-}
-
-/**
- * @brief Retrieves the stored value as []string without type checking
- *
- * @return The []string slice
- *
- * Warning: This function does not perform type checking. Use GetStrings() for type-safe access.
- */
-func (f *ImmutableFeature) GetStringsUnsafe() []string {
-	return getStringsUnsafe(f.ptr)
-}
-
-/**
- * @brief ImmutableFeatures is a read-only collection of typed features
- *
- * This collection stores features in arena-allocated memory for efficient
- * access and reduced garbage collection pressure. Once created, the features
- * cannot be modified, ensuring data integrity in concurrent environments.
- *
- * Key characteristics:
- * - Immutable after creation
- * - Memory-efficient storage using arena allocation
- * - Type-safe access to stored values
- * - JSON serialization support
- * - Conversion to mutable features
- */
+// ImmutableFeatures is a read-only, arena-backed collection of typed features.
+// After construction the map cannot be modified, making it safe for concurrent
+// reads without additional locking.
 type ImmutableFeatures struct {
-	arena    *Arena                      // Memory arena for storage
-	features map[string]ImmutableFeature // Map of feature name to feature
+	arena    *Arena
+	features map[string]ImmutableFeature
 }
 
-/**
- * @brief Creates a new empty ImmutableFeatures collection
- *
- * @param arena Memory arena for storage
- * @return Pointer to new ImmutableFeatures collection
- */
+// NewImmutableFeatures returns an empty ImmutableFeatures backed by arena.
 func NewImmutableFeatures(arena *Arena) *ImmutableFeatures {
 	return &ImmutableFeatures{
 		arena:    arena,
@@ -220,57 +87,33 @@ func NewImmutableFeatures(arena *Arena) *ImmutableFeatures {
 	}
 }
 
-/**
- * @brief Creates ImmutableFeatures from a map of values
- *
- * @param data Map of feature names to values
- * @param arena Memory arena for storage
- * @return Pointer to new ImmutableFeatures and error if conversion fails
- *
- * Supported value types:
- * - int, int64: stored as Int64Type
- * - float32, float64: stored as Float32Type (float64 converted to float32)
- * - string: stored as StringType
- * - []int, []int64: stored as Int64sType
- * - []float32, []float64: stored as Float32sType
- * - []string: stored as StringsType
- */
+// NewImmutableFeaturesFromMap constructs an ImmutableFeatures from a plain
+// map, copying each value into arena. Supported value types: int, int64,
+// float32, float64, string, []int, []int64, []float32, []float64, []string.
 func NewImmutableFeaturesFromMap(data map[string]any, arena *Arena) (*ImmutableFeatures, error) {
-	features := &ImmutableFeatures{
+	f := &ImmutableFeatures{
 		arena:    arena,
 		features: make(map[string]ImmutableFeature, len(data)),
 	}
-
 	for key, value := range data {
 		ptr, err := putAnyValue(value, arena)
 		if err != nil {
-			return nil, fmt.Errorf("failed to store value for key %s: %w", key, err)
+			return nil, fmt.Errorf("key %s: %w", key, err)
 		}
-		features.features[key] = ImmutableFeature{ptr: ptr}
+		f.features[key] = ImmutableFeature{ptr: ptr}
 	}
-
-	return features, nil
+	return f, nil
 }
 
-/**
- * @brief Gets the data type of a feature by key
- *
- * @param key Feature name
- * @return DataType of the feature, InvalidType if not found
- */
+// GetType returns the DataType for key, or InvalidType when absent.
 func (f *ImmutableFeatures) GetType(key string) DataType {
-	if feature, ok := f.features[key]; ok {
-		return feature.Type()
+	if fea, ok := f.features[key]; ok {
+		return fea.Type()
 	}
 	return InvalidType
 }
 
-/**
- * @brief Retrieves a feature by name
- *
- * @param key Feature name
- * @return Feature interface or nil if not found
- */
+// Get returns the Feature for key, or nil when absent.
 func (f *ImmutableFeatures) Get(key string) Feature {
 	if fea, ok := f.features[key]; ok {
 		return &fea
@@ -278,45 +121,21 @@ func (f *ImmutableFeatures) Get(key string) Feature {
 	return nil
 }
 
-/**
- * @brief Checks if a feature exists
- *
- * @param key Feature name
- * @return True if feature exists, false otherwise
- */
+// Has reports whether key exists.
 func (f *ImmutableFeatures) Has(key string) bool {
 	_, ok := f.features[key]
 	return ok
 }
 
-/**
- * @brief Returns the number of features in the collection
- *
- * @return Number of features
- */
-func (f *ImmutableFeatures) Len() int {
-	return len(f.features)
-}
+// Len returns the number of features.
+func (f *ImmutableFeatures) Len() int { return len(f.features) }
 
-/**
- * @brief Returns all feature names
- *
- * @return Slice of feature names
- */
+// Keys returns all feature keys in unspecified order.
 func (f *ImmutableFeatures) Keys() []string {
-	ret := make([]string, 0, len(f.features))
-	for key := range f.features {
-		ret = append(ret, key)
-	}
-	return ret
+	return slices.Collect(maps.Keys(f.features))
 }
 
-/**
- * @brief Iterates over all features with a callback function
- *
- * @param fn Callback function called for each feature
- * @return Error if callback returns error
- */
+// ForEach calls fn for every key-feature pair, stopping on the first non-nil error.
 func (f *ImmutableFeatures) ForEach(fn IteratorFunc) error {
 	for key, fea := range f.features {
 		if err := fn(key, &fea); err != nil {
@@ -326,170 +145,121 @@ func (f *ImmutableFeatures) ForEach(fn IteratorFunc) error {
 	return nil
 }
 
-/**
- * @brief Converts features to a map for serialization
- *
- * @return Map of feature names to structured values and error if conversion fails
- *
- * Each value in the returned map contains:
- * - Type: DataType of the feature
- * - Value: The actual value
- */
-func (f *ImmutableFeatures) MapAny() (map[string]any, error) {
-	feas := make(map[string]any, len(f.features))
-
-	for key, fea := range f.features {
-		dtype := fea.Type()
-		switch dtype {
-		case Int64Type:
-			feas[key] = struct {
-				Type  DataType `json:"type"`
-				Value int64    `json:"value"`
-			}{Int64Type, fea.GetInt64Unsafe()}
-		case Float32Type:
-			feas[key] = struct {
-				Type  DataType `json:"type"`
-				Value float32  `json:"value"`
-			}{Float32Type, fea.GetFloat32Unsafe()}
-		case StringType:
-			feas[key] = struct {
-				Type  DataType `json:"type"`
-				Value string   `json:"value"`
-			}{StringType, fea.GetStringUnsafe()}
-		case Int64sType:
-			feas[key] = struct {
-				Type  DataType `json:"type"`
-				Value []int64  `json:"value"`
-			}{Int64sType, fea.GetInt64sUnsafe()}
-		case Float32sType:
-			feas[key] = struct {
-				Type  DataType  `json:"type"`
-				Value []float32 `json:"value"`
-			}{Float32sType, fea.GetFloat32sUnsafe()}
-		case StringsType:
-			feas[key] = struct {
-				Type  DataType `json:"type"`
-				Value []string `json:"value"`
-			}{StringsType, fea.GetStringsUnsafe()}
-		default:
-			return nil, fmt.Errorf("unknown data type %v for key %s", dtype, key)
+// All returns an iterator over all key-feature pairs (Go 1.23+ range syntax).
+//
+//	for key, f := range features.All() {
+//	    fmt.Println(key, f.Type())
+//	}
+func (f *ImmutableFeatures) All() iter.Seq2[string, Feature] {
+	return func(yield func(string, Feature) bool) {
+		for key, fea := range f.features {
+			fea := fea // copy loop variable for safe address-taking
+			if !yield(key, &fea) {
+				return
+			}
 		}
 	}
-	return feas, nil
 }
 
-/**
- * @brief Marshals features to JSON
- *
- * @return JSON bytes and error if marshaling fails
- */
+// MapAny converts every feature to a {type, value} struct for serialization.
+func (f *ImmutableFeatures) MapAny() (map[string]any, error) {
+	out := make(map[string]any, len(f.features))
+	for key, fea := range f.features {
+		v, err := featureToAny(&fea)
+		if err != nil {
+			return nil, fmt.Errorf("key %s: %w", key, err)
+		}
+		out[key] = v
+	}
+	return out, nil
+}
+
+// MarshalJSON encodes the collection as JSON.
 func (f *ImmutableFeatures) MarshalJSON() ([]byte, error) {
-	feas, err := f.MapAny()
+	m, err := f.MapAny()
 	if err != nil {
 		return nil, err
 	}
-	return sonic.Marshal(feas)
+	return sonic.Marshal(m)
 }
 
-/**
- * @brief Unmarshals features from JSON
- *
- * @param data JSON bytes to unmarshal
- * @return Error if unmarshaling fails
- */
+// UnmarshalJSON decodes JSON produced by MarshalJSON.
 func (f *ImmutableFeatures) UnmarshalJSON(data []byte) error {
-	type Fea struct {
+	type wire struct {
 		Type  DataType        `json:"type"`
 		Value json.RawMessage `json:"value"`
 	}
-
-	var fea map[string]Fea
-	err := sonic.Unmarshal(data, &fea)
-	if err != nil {
+	var raw map[string]wire
+	if err := sonic.Unmarshal(data, &raw); err != nil {
 		return err
 	}
 
-	// Initialize arena if not exists
 	if f.arena == nil {
 		f.arena = NewArena()
 	}
 	if f.features == nil {
-		f.features = make(map[string]ImmutableFeature)
+		f.features = make(map[string]ImmutableFeature, len(raw))
 	}
 
-	for key, value := range fea {
-		var ptr unsafe.Pointer
-		var unmarshalErr error
-
-		switch value.Type {
-		case Int64Type:
-			var num int64
-			if err := sonic.Unmarshal(value.Value, &num); err != nil {
-				return fmt.Errorf("failed to unmarshal int64 for key %s: %w", key, err)
-			}
-			ptr, unmarshalErr = putInt64(num, f.arena)
-
-		case Float32Type:
-			var num float32
-			if err := sonic.Unmarshal(value.Value, &num); err != nil {
-				return fmt.Errorf("failed to unmarshal float32 for key %s: %w", key, err)
-			}
-			ptr, unmarshalErr = putFloat32(num, f.arena)
-
-		case StringType:
-			var str string
-			if err := sonic.Unmarshal(value.Value, &str); err != nil {
-				return fmt.Errorf("failed to unmarshal string for key %s: %w", key, err)
-			}
-			ptr, unmarshalErr = putString(str, f.arena)
-
-		case Int64sType:
-			var nums []int64
-			if err := sonic.Unmarshal(value.Value, &nums); err != nil {
-				return fmt.Errorf("failed to unmarshal int64s for key %s: %w", key, err)
-			}
-			ptr, unmarshalErr = putInt64s(nums, f.arena)
-
-		case Float32sType:
-			var nums []float32
-			if err := sonic.Unmarshal(value.Value, &nums); err != nil {
-				return fmt.Errorf("failed to unmarshal float32s for key %s: %w", key, err)
-			}
-			ptr, unmarshalErr = putFloat32s(nums, f.arena)
-
-		case StringsType:
-			var strs []string
-			if err := sonic.Unmarshal(value.Value, &strs); err != nil {
-				return fmt.Errorf("failed to unmarshal strings for key %s: %w", key, err)
-			}
-			ptr, unmarshalErr = putStrings(strs, f.arena)
-
-		default:
-			return fmt.Errorf("unknown data type %v for key %s", value.Type, key)
+	for key, w := range raw {
+		ptr, err := unmarshalValue(w.Type, w.Value, f.arena)
+		if err != nil {
+			return fmt.Errorf("key %s: %w", key, err)
 		}
-
-		if unmarshalErr != nil {
-			return fmt.Errorf("failed to store value for key %s: %w", key, unmarshalErr)
-		}
-
 		f.features[key] = ImmutableFeature{ptr: ptr}
 	}
 	return nil
 }
 
-/**
- * @brief Creates a mutable copy of the features
- *
- * @return Pointer to new MutableFeatures with deep-copied values
- *
- * All values are deep-copied to ensure the mutable copy is independent
- * of the original immutable features.
- */
+// unmarshalValue decodes a single JSON value of the given DataType into arena.
+func unmarshalValue(dt DataType, raw json.RawMessage, arena *Arena) (unsafe.Pointer, error) {
+	switch dt {
+	case Int64Type:
+		var v int64
+		if err := sonic.Unmarshal(raw, &v); err != nil {
+			return nil, err
+		}
+		return putInt64(v, arena)
+	case Float32Type:
+		var v float32
+		if err := sonic.Unmarshal(raw, &v); err != nil {
+			return nil, err
+		}
+		return putFloat32(v, arena)
+	case StringType:
+		var v string
+		if err := sonic.Unmarshal(raw, &v); err != nil {
+			return nil, err
+		}
+		return putString(v, arena)
+	case Int64sType:
+		var v []int64
+		if err := sonic.Unmarshal(raw, &v); err != nil {
+			return nil, err
+		}
+		return putInt64s(v, arena)
+	case Float32sType:
+		var v []float32
+		if err := sonic.Unmarshal(raw, &v); err != nil {
+			return nil, err
+		}
+		return putFloat32s(v, arena)
+	case StringsType:
+		var v []string
+		if err := sonic.Unmarshal(raw, &v); err != nil {
+			return nil, err
+		}
+		return putStrings(v, arena)
+	default:
+		return nil, fmt.Errorf("unknown data type %v", dt)
+	}
+}
+
+// Mutable returns a deep-copied MutableFeatures, independent of the arena.
 func (f *ImmutableFeatures) Mutable() *MutableFeatures {
 	ret := NewMutableFeatures()
 	for key, fea := range f.features {
-		dtype := fea.Type()
-		switch dtype {
+		switch fea.Type() {
 		case Int64Type:
 			ret.features[key] = &Int64{Value: fea.GetInt64Unsafe()}
 		case Float32Type:
@@ -497,15 +267,15 @@ func (f *ImmutableFeatures) Mutable() *MutableFeatures {
 		case StringType:
 			ret.features[key] = &String{Value: strings.Clone(fea.GetStringUnsafe())}
 		case Int64sType:
-			v := fea.GetInt64sUnsafe()
-			nums := make([]int64, len(v))
-			copy(nums, v)
-			ret.features[key] = &Int64s{Value: nums}
+			src := fea.GetInt64sUnsafe()
+			dst := make([]int64, len(src))
+			copy(dst, src)
+			ret.features[key] = &Int64s{Value: dst}
 		case Float32sType:
-			v := fea.GetFloat32sUnsafe()
-			nums := make([]float32, len(v))
-			copy(nums, v)
-			ret.features[key] = &Float32s{Value: nums}
+			src := fea.GetFloat32sUnsafe()
+			dst := make([]float32, len(src))
+			copy(dst, src)
+			ret.features[key] = &Float32s{Value: dst}
 		case StringsType:
 			ret.features[key] = &Strings{Value: deepcopyStrings(fea.GetStringsUnsafe())}
 		}
@@ -513,35 +283,21 @@ func (f *ImmutableFeatures) Mutable() *MutableFeatures {
 	return ret
 }
 
-// Storage functions with 8-byte aligned memory layout
+// ---------------------------------------------------------------------------
+// Arena storage helpers
+// ---------------------------------------------------------------------------
 
-/**
- * @brief Stores an int64 value in arena memory
- *
- * @param value The int64 value to store
- * @param arena Memory arena for allocation
- * @return Memory address of stored value and error if allocation fails
- *
- * Memory Layout: [DataType:8] + [Value:8] = 16 bytes total
- */
+// putInt64 writes [DataType:8][Value:8] into a 16-byte arena block.
 func putInt64(value int64, arena *Arena) (unsafe.Pointer, error) {
 	data, err := arena.allocate(16)
 	if err != nil {
 		return nil, err
 	}
-
 	*(*DataType)(unsafe.Pointer(&data[0])) = Int64Type
 	*(*int64)(unsafe.Pointer(&data[8])) = value
-
 	return unsafe.Pointer(&data[0]), nil
 }
 
-/**
- * @brief Retrieves an int64 value from arena memory
- *
- * @param ptr Memory address of the stored value
- * @return The int64 value and error if type mismatch
- */
 func getInt64(ptr unsafe.Pointer) (int64, error) {
 	if getDataType(ptr) != Int64Type {
 		return 0, fmt.Errorf("%w: expected %v, got %v", ErrTypeMismatch, Int64Type, getDataType(ptr))
@@ -549,46 +305,21 @@ func getInt64(ptr unsafe.Pointer) (int64, error) {
 	return getInt64Unsafe(ptr), nil
 }
 
-/**
- * @brief Retrieves an int64 value from arena memory without type checking
- *
- * @param ptr Memory address of the stored value
- * @return The int64 value
- *
- * Warning: This function does not perform type checking. Use getInt64() for type-safe access.
- */
 func getInt64Unsafe(ptr unsafe.Pointer) int64 {
 	return *(*int64)(unsafe.Add(ptr, 8))
 }
 
-/**
- * @brief Stores a float32 value in arena memory
- *
- * @param value The float32 value to store
- * @param arena Memory arena for allocation
- * @return Memory address of stored value and error if allocation fails
- *
- * Memory Layout: [DataType:8] + [Value:4] + [Padding:4] = 16 bytes total
- */
+// putFloat32 writes [DataType:8][Value:4][Pad:4] into a 16-byte arena block.
 func putFloat32(value float32, arena *Arena) (unsafe.Pointer, error) {
 	data, err := arena.allocate(16)
 	if err != nil {
 		return nil, err
 	}
-
 	*(*DataType)(unsafe.Pointer(&data[0])) = Float32Type
 	*(*float32)(unsafe.Pointer(&data[8])) = value
-	// Bytes 12-16 are padding for alignment
-
 	return unsafe.Pointer(&data[0]), nil
 }
 
-/**
- * @brief Retrieves a float32 value from arena memory
- *
- * @param ptr Memory address of the stored value
- * @return The float32 value and error if type mismatch
- */
 func getFloat32(ptr unsafe.Pointer) (float32, error) {
 	if getDataType(ptr) != Float32Type {
 		return 0, fmt.Errorf("%w: expected %v, got %v", ErrTypeMismatch, Float32Type, getDataType(ptr))
@@ -596,381 +327,161 @@ func getFloat32(ptr unsafe.Pointer) (float32, error) {
 	return getFloat32Unsafe(ptr), nil
 }
 
-/**
- * @brief Retrieves a float32 value from arena memory without type checking
- *
- * @param ptr Memory address of the stored value
- * @return The float32 value
- *
- * Warning: This function does not perform type checking. Use getFloat32() for type-safe access.
- */
 func getFloat32Unsafe(ptr unsafe.Pointer) float32 {
 	return *(*float32)(unsafe.Add(ptr, 8))
 }
 
-/**
- * @brief Stores a string value in arena memory
- *
- * @param value The string value to store
- * @param arena Memory arena for allocation
- * @return Memory address of stored value and error if allocation fails
- *
- * Memory Layout: [DataType:8] + [Len:8] + [Data:aligned] = 16 + aligned(len) bytes
- */
+// putString writes [DataType:8][Len:8][Data:align(len)] into the arena.
 func putString(value string, arena *Arena) (unsafe.Pointer, error) {
 	strLen := len(value)
-	dataSize := alignSize(uintptr(strLen))
-	totalSize := 16 + dataSize // 16 = 8(type) + 8(len)
-
-	data, err := arena.allocate(totalSize)
+	total := 16 + alignSize(uintptr(strLen)) // 8 (type) + 8 (len) + data
+	data, err := arena.allocate(total)
 	if err != nil {
 		return nil, err
 	}
-
 	*(*DataType)(unsafe.Pointer(&data[0])) = StringType
 	*(*uint64)(unsafe.Pointer(&data[8])) = uint64(strLen)
-
 	if strLen > 0 {
-		copy(data[16:16+strLen], value)
+		copy(data[16:], value)
 	}
-
 	return unsafe.Pointer(&data[0]), nil
 }
 
-/**
- * @brief Retrieves a string value from arena memory
- *
- * @param ptr Memory address of the stored value
- * @return The string value and error if type mismatch
- */
 func getString(ptr unsafe.Pointer) (string, error) {
 	if getDataType(ptr) != StringType {
 		return "", fmt.Errorf("%w: expected %v, got %v", ErrTypeMismatch, StringType, getDataType(ptr))
 	}
-
 	return getStringUnsafe(ptr), nil
 }
 
-/**
- * @brief Retrieves a string value from arena memory without type checking
- *
- * @param ptr Memory address of the stored value
- * @return The string value
- *
- * Warning: This function does not perform type checking. Use getString() for type-safe access.
- */
 func getStringUnsafe(ptr unsafe.Pointer) string {
-	strLen := *(*uint64)(unsafe.Add(ptr, 8))
-	if strLen == 0 {
+	n := *(*uint64)(unsafe.Add(ptr, 8))
+	if n == 0 {
 		return ""
 	}
-
-	strData := unsafe.Slice((*byte)(unsafe.Add(ptr, 16)), strLen)
-	return unsafe.String(&strData[0], int(strLen))
+	return unsafe.String((*byte)(unsafe.Add(ptr, 16)), int(n))
 }
 
-/**
- * @brief Stores an int64 slice in arena memory with zero-copy retrieval support
- *
- * @param arr The int64 slice to store
- * @param arena Memory arena for allocation
- * @return Memory address of stored slice and error if allocation fails
- *
- * Memory Layout (designed for zero-copy access):
- * [DataType:8] + [SliceLen:8] + [Data:arrLen*8]
- *
- * The layout directly stores the slice data after the header, allowing
- * unsafe.Slice to create a zero-copy view of the data.
- */
+// putInt64s writes [DataType:8][Len:8][Data:len*8] into the arena.
+// The slice returned by getInt64sUnsafe points directly into the arena block.
 func putInt64s(arr []int64, arena *Arena) (unsafe.Pointer, error) {
-	arrLen := len(arr)
-	if arrLen == 0 {
-		// Empty slice: [DataType:8] + [SliceLen:8] = 16 bytes
-		data, err := arena.allocate(16)
-		if err != nil {
-			return nil, err
-		}
-
-		*(*DataType)(unsafe.Pointer(&data[0])) = Int64sType
-		*(*uint64)(unsafe.Pointer(&data[8])) = 0
-
-		return unsafe.Pointer(&data[0]), nil
-	}
-
-	// Calculate required space: header + data
-	dataSize := uintptr(arrLen) * 8 // int64 is 8 bytes each
-	totalSize := 16 + dataSize      // 16 bytes header + data
-
-	data, err := arena.allocate(totalSize)
+	n := len(arr)
+	total := uintptr(16 + n*8)
+	data, err := arena.allocate(total)
 	if err != nil {
 		return nil, err
 	}
-
 	*(*DataType)(unsafe.Pointer(&data[0])) = Int64sType
-	*(*uint64)(unsafe.Pointer(&data[8])) = uint64(arrLen)
-
-	// Copy slice data directly after header
-	if arrLen > 0 {
-		dataStart := unsafe.Pointer(&data[16])
-		dataSlice := unsafe.Slice((*int64)(dataStart), arrLen)
-		copy(dataSlice, arr)
+	*(*uint64)(unsafe.Pointer(&data[8])) = uint64(n)
+	if n > 0 {
+		copy(unsafe.Slice((*int64)(unsafe.Pointer(&data[16])), n), arr)
 	}
-
 	return unsafe.Pointer(&data[0]), nil
 }
 
-/**
- * @brief Retrieves an int64 slice from arena memory with zero-copy access
- *
- * @param ptr Memory address of the stored slice
- * @return The int64 slice pointing directly to arena memory, error if type mismatch
- *
- * Returns a slice that directly references the arena memory without copying.
- */
 func getInt64s(ptr unsafe.Pointer) ([]int64, error) {
 	if getDataType(ptr) != Int64sType {
 		return nil, fmt.Errorf("%w: expected %v, got %v", ErrTypeMismatch, Int64sType, getDataType(ptr))
 	}
-
 	return getInt64sUnsafe(ptr), nil
 }
 
-/**
- * @brief Retrieves an int64 slice from arena memory with zero-copy access (unsafe version)
- *
- * @param ptr Memory address of the stored slice
- * @return The int64 slice pointing directly to arena memory
- *
- * Warning: This function does not perform type checking. Use getInt64s() for type-safe access.
- * Returns a slice that directly references the arena memory without copying.
- */
 func getInt64sUnsafe(ptr unsafe.Pointer) []int64 {
-	arrLen := *(*uint64)(unsafe.Add(ptr, 8))
-	if arrLen == 0 {
+	n := *(*uint64)(unsafe.Add(ptr, 8))
+	if n == 0 {
 		return nil
 	}
-
-	// Create zero-copy slice pointing directly to arena data
-	dataStart := unsafe.Add(ptr, 16)
-	return unsafe.Slice((*int64)(dataStart), int(arrLen))
+	return unsafe.Slice((*int64)(unsafe.Add(ptr, 16)), int(n))
 }
 
-/**
- * @brief Stores a float32 slice in arena memory with zero-copy retrieval support
- *
- * @param arr The float32 slice to store
- * @param arena Memory arena for allocation
- * @return Memory address of stored slice and error if allocation fails
- *
- * Memory Layout (designed for zero-copy access):
- * [DataType:8] + [SliceLen:8] + [Data:aligned(arrLen*4)]
- *
- * Float32 data is aligned to 8-byte boundary for consistent alignment.
- */
+// putFloat32s writes [DataType:8][Len:8][Data:align(len*4)] into the arena.
 func putFloat32s(arr []float32, arena *Arena) (unsafe.Pointer, error) {
-	arrLen := len(arr)
-	if arrLen == 0 {
-		// Empty slice: [DataType:8] + [SliceLen:8] = 16 bytes
-		data, err := arena.allocate(16)
-		if err != nil {
-			return nil, err
-		}
-
-		*(*DataType)(unsafe.Pointer(&data[0])) = Float32sType
-		*(*uint64)(unsafe.Pointer(&data[8])) = 0
-
-		return unsafe.Pointer(&data[0]), nil
-	}
-
-	// Calculate required space with alignment
-	dataSize := alignSize(uintptr(arrLen) * 4) // float32 is 4 bytes each, aligned to 8
-	totalSize := 16 + dataSize                 // 16 bytes header + aligned data
-
-	data, err := arena.allocate(totalSize)
+	n := len(arr)
+	total := 16 + alignSize(uintptr(n)*4)
+	data, err := arena.allocate(total)
 	if err != nil {
 		return nil, err
 	}
-
 	*(*DataType)(unsafe.Pointer(&data[0])) = Float32sType
-	*(*uint64)(unsafe.Pointer(&data[8])) = uint64(arrLen)
-
-	// Copy slice data directly after header
-	if arrLen > 0 {
-		dataStart := unsafe.Pointer(&data[16])
-		dataSlice := unsafe.Slice((*float32)(dataStart), arrLen)
-		copy(dataSlice, arr)
+	*(*uint64)(unsafe.Pointer(&data[8])) = uint64(n)
+	if n > 0 {
+		copy(unsafe.Slice((*float32)(unsafe.Pointer(&data[16])), n), arr)
 	}
-
 	return unsafe.Pointer(&data[0]), nil
 }
 
-/**
- * @brief Retrieves a float32 slice from arena memory with zero-copy access
- *
- * @param ptr Memory address of the stored slice
- * @return The float32 slice pointing directly to arena memory, error if type mismatch
- *
- * Returns a slice that directly references the arena memory without copying.
- */
 func getFloat32s(ptr unsafe.Pointer) ([]float32, error) {
 	if getDataType(ptr) != Float32sType {
 		return nil, fmt.Errorf("%w: expected %v, got %v", ErrTypeMismatch, Float32sType, getDataType(ptr))
 	}
-
 	return getFloat32sUnsafe(ptr), nil
 }
 
-/**
- * @brief Retrieves a float32 slice from arena memory with zero-copy access (unsafe version)
- *
- * @param ptr Memory address of the stored slice
- * @return The float32 slice pointing directly to arena memory
- *
- * Warning: This function does not perform type checking. Use getFloat32s() for type-safe access.
- * Returns a slice that directly references the arena memory without copying.
- */
 func getFloat32sUnsafe(ptr unsafe.Pointer) []float32 {
-	arrLen := *(*uint64)(unsafe.Add(ptr, 8))
-	if arrLen == 0 {
+	n := *(*uint64)(unsafe.Add(ptr, 8))
+	if n == 0 {
 		return nil
 	}
-
-	// Create zero-copy slice pointing directly to arena data
-	dataStart := unsafe.Add(ptr, 16)
-	return unsafe.Slice((*float32)(dataStart), int(arrLen))
+	return unsafe.Slice((*float32)(unsafe.Add(ptr, 16)), int(n))
 }
 
-/**
- * @brief Stores a string slice in arena memory with zero-copy retrieval support
- *
- * @param arr The string slice to store
- * @param arena Memory arena for allocation
- * @return Memory address of stored slice and error if allocation fails
- *
- * Memory Layout (designed for zero-copy access):
- * [DataType:8] + [SliceLen:8] + [StringHeaders:arrLen*16] + [StringData:aligned]
- *
- * Where:
- * - SliceLen: Number of strings in the slice
- * - StringHeaders: Array of string headers (pointer + length) for each string
- * - StringData: Concatenated string data referenced by string headers
- *
- * This layout allows unsafe.Slice to create a zero-copy []string view.
- */
+// putStrings writes a compact block into the arena:
+//
+//	[DataType:8][Len:8][Headers:align(len*16)][StringData:align(totalChars)]
+//
+// Each header is a Go string (pointer+length) pointing into the StringData
+// region, so getStringsUnsafe can return a zero-copy []string view.
 func putStrings(arr []string, arena *Arena) (unsafe.Pointer, error) {
-	arrLen := len(arr)
-	if arrLen == 0 {
-		// Empty slice: [DataType:8] + [SliceLen:8] = 16 bytes
-		data, err := arena.allocate(16)
-		if err != nil {
-			return nil, err
-		}
-
-		*(*DataType)(unsafe.Pointer(&data[0])) = StringsType
-		*(*uint64)(unsafe.Pointer(&data[8])) = 0
-
-		return unsafe.Pointer(&data[0]), nil
-	}
-
-	// Calculate required space
-	stringHeadersSize := alignSize(uintptr(arrLen) * 16) // Each string header: 16 bytes (ptr+len), aligned
-
-	var totalStrLen uintptr
+	n := len(arr)
+	headersSize := alignSize(uintptr(n) * 16)
+	var totalLen uintptr
 	for _, s := range arr {
-		totalStrLen += uintptr(len(s))
+		totalLen += uintptr(len(s))
 	}
-	stringDataSize := alignSize(totalStrLen)
-
-	totalSize := 16 + stringHeadersSize + stringDataSize
-	data, err := arena.allocate(totalSize)
+	total := 16 + headersSize + alignSize(totalLen)
+	data, err := arena.allocate(total)
 	if err != nil {
 		return nil, err
 	}
 
 	*(*DataType)(unsafe.Pointer(&data[0])) = StringsType
-	*(*uint64)(unsafe.Pointer(&data[8])) = uint64(arrLen)
+	*(*uint64)(unsafe.Pointer(&data[8])) = uint64(n)
 
-	// Setup string headers and data
-	stringHeadersStart := 16
-	stringDataStart := stringHeadersStart + int(stringHeadersSize)
-	var currentOffset uintptr
-
+	headerBase := 16
+	dataBase := headerBase + int(headersSize)
+	var offset uintptr
 	for i, s := range arr {
-		strLen := len(s)
-
-		// Calculate header position (each header is 16 bytes)
-		headerPos := stringHeadersStart + i*16
-
-		if strLen > 0 {
-			// Copy string data
-			copy(data[stringDataStart+int(currentOffset):], s)
-
-			// Create string header: [Data:8] + [Len:8]
-			// Use unsafe.String to create the string pointing to arena memory
-			strPtr := unsafe.Pointer(&data[stringDataStart+int(currentOffset)])
-			str := unsafe.String((*byte)(strPtr), strLen)
-
-			// Store the string in the header area
-			*(*string)(unsafe.Pointer(&data[headerPos])) = str
-
-			currentOffset += uintptr(strLen)
+		hdrPtr := unsafe.Pointer(&data[headerBase+i*16])
+		if l := len(s); l > 0 {
+			copy(data[dataBase+int(offset):], s)
+			str := unsafe.String((*byte)(unsafe.Pointer(&data[dataBase+int(offset)])), l)
+			*(*string)(hdrPtr) = str
+			offset += uintptr(l)
 		} else {
-			// Empty string
-			*(*string)(unsafe.Pointer(&data[headerPos])) = ""
+			*(*string)(hdrPtr) = ""
 		}
 	}
-
 	return unsafe.Pointer(&data[0]), nil
 }
 
-/**
- * @brief Retrieves a string slice from arena memory with zero-copy access
- *
- * @param ptr Memory address of the stored slice
- * @return The string slice pointing directly to arena memory, error if type mismatch
- *
- * This function creates a slice that directly references the string headers
- * stored in arena memory, achieving true zero-copy access.
- */
 func getStrings(ptr unsafe.Pointer) ([]string, error) {
 	if getDataType(ptr) != StringsType {
 		return nil, fmt.Errorf("%w: expected %v, got %v", ErrTypeMismatch, StringsType, getDataType(ptr))
 	}
-
 	return getStringsUnsafe(ptr), nil
 }
 
-/**
- * @brief Retrieves a string slice from arena memory with zero-copy access (unsafe version)
- *
- * @param ptr Memory address of the stored slice
- * @return The string slice pointing directly to arena memory
- *
- * Warning: This function does not perform type checking. Use getStrings() for type-safe access.
- * This function creates a slice that directly references the string headers
- * stored in arena memory, achieving true zero-copy access.
- */
+// getStringsUnsafe returns a zero-copy []string whose headers live inside the
+// arena block.
 func getStringsUnsafe(ptr unsafe.Pointer) []string {
-	arrLen := *(*uint64)(unsafe.Add(ptr, 8))
-	if arrLen == 0 {
+	n := *(*uint64)(unsafe.Add(ptr, 8))
+	if n == 0 {
 		return nil
 	}
-
-	// Create zero-copy slice pointing directly to the string headers in arena memory
-	// Each string is stored as a complete Go string (16 bytes on 64-bit)
-	// Use unsafe.Slice to create a slice view of the stored strings
-	return unsafe.Slice((*string)(unsafe.Add(ptr, 16)), int(arrLen))
+	return unsafe.Slice((*string)(unsafe.Add(ptr, 16)), int(n))
 }
 
-/**
- * @brief Retrieves the DataType from arena memory address
- *
- * @param ptr Memory address of the stored value
- * @return DataType of the stored value, InvalidType if ptr is null
- *
- * This function reads the first 8 bytes of the memory location which
- * contains the DataType information for all stored values.
- */
+// getDataType reads the first 8 bytes of a memory block as a DataType.
 func getDataType(ptr unsafe.Pointer) DataType {
 	if ptr == nil {
 		return InvalidType
@@ -978,21 +489,8 @@ func getDataType(ptr unsafe.Pointer) DataType {
 	return *(*DataType)(ptr)
 }
 
-/**
- * @brief Stores any supported value type in arena memory
- *
- * @param value The value to store (must be supported type)
- * @param arena Memory arena for allocation
- * @return Memory address of stored value and error if type unsupported or allocation fails
- *
- * Supported Types:
- * - int, int64 -> Int64Type
- * - float32, float64 -> Float32Type (float64 converted to float32)
- * - string -> StringType
- * - []int, []int64 -> Int64sType
- * - []float32, []float64 -> Float32sType
- * - []string -> StringsType
- */
+// putAnyValue stores value into arena, dispatching on its Go type.
+// Supported: int, int64, float32, float64, string, []int, []int64, []float32, []float64, []string.
 func putAnyValue(value any, arena *Arena) (unsafe.Pointer, error) {
 	switch v := value.(type) {
 	case int64:
@@ -1008,19 +506,19 @@ func putAnyValue(value any, arena *Arena) (unsafe.Pointer, error) {
 	case []int64:
 		return putInt64s(v, arena)
 	case []int:
-		int64s := make([]int64, len(v))
-		for i, val := range v {
-			int64s[i] = int64(val)
+		s := make([]int64, len(v))
+		for i, x := range v {
+			s[i] = int64(x)
 		}
-		return putInt64s(int64s, arena)
+		return putInt64s(s, arena)
 	case []float32:
 		return putFloat32s(v, arena)
 	case []float64:
-		float32s := make([]float32, len(v))
-		for i, val := range v {
-			float32s[i] = float32(val)
+		s := make([]float32, len(v))
+		for i, x := range v {
+			s[i] = float32(x)
 		}
-		return putFloat32s(float32s, arena)
+		return putFloat32s(s, arena)
 	case []string:
 		return putStrings(v, arena)
 	default:
@@ -1028,24 +526,15 @@ func putAnyValue(value any, arena *Arena) (unsafe.Pointer, error) {
 	}
 }
 
-/**
- * @brief Creates deep copies of string slices using Go 1.20+ strings.Clone
- *
- * @param arr The string slice to copy
- * @return Deep copy of the string slice with independent memory allocation
- *
- * Uses strings.Clone (Go 1.20+) for efficient string copying that ensures
- * the copied strings are independent of the original memory. Returns nil
- * for empty input slices to maintain consistency with Go slice semantics.
- */
+// deepcopyStrings returns a fresh []string whose elements are independent
+// copies of the originals (using strings.Clone for efficiency).
 func deepcopyStrings(arr []string) []string {
 	if len(arr) == 0 {
 		return nil
 	}
-
-	ret := make([]string, len(arr))
+	out := make([]string, len(arr))
 	for i, s := range arr {
-		ret[i] = strings.Clone(s)
+		out[i] = strings.Clone(s)
 	}
-	return ret
+	return out
 }

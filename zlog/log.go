@@ -3,6 +3,7 @@ package zlog
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -31,39 +32,30 @@ func init() {
 	SLOG = zap.S()
 }
 
-// InitLogger initializes a customized logger with file rotation and configurable settings.
-//
-// @param appName: Name of the application used in log file naming
-// @param debug: If true, enables debug level logging and console output
-// @param logDir: Directory where log files will be stored
-//
-// The function sets up:
-// - File logging with rotation using lumberjack
-// - Console output in debug mode
-// - Appropriate log levels based on debug flag
-// - ISO8601 time encoding and caller information
+// InitLogger initializes a customized logger with file rotation and configurable
+// settings. appName is used in the log filename; logDir is the directory where
+// log files are written. When debug is true, the level is set to Debug and
+// output is also mirrored to stdout with stack traces on Warn and above.
 func InitLogger(appName string, debug bool, logDir string) {
 	// Create log directory if it doesn't exist
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		panic(fmt.Sprintf("failed to create log directory: %v", err))
 	}
 
-	var logFilePath string
-	var lv zapcore.Level
+	suffix := "release"
+	lv := zap.InfoLevel
 	if debug {
-		logFilePath = fmt.Sprintf("%s/%s_debug.log", logDir, appName)
+		suffix = "debug"
 		lv = zap.DebugLevel
-	} else {
-		logFilePath = fmt.Sprintf("%s/%s_release.log", logDir, appName)
-		lv = zap.InfoLevel
 	}
+	logFilePath := filepath.Join(logDir, appName+"_"+suffix+".log")
 
 	hook := lumberjack.Logger{
-		Filename:   logFilePath, // Log file path
-		MaxSize:    100,         // Maximum size of each log file in megabytes
-		MaxBackups: 20,          // Maximum number of backup log files
-		MaxAge:     14,          // Maximum number of days to retain log files
-		Compress:   true,        // Whether to compress backup log files
+		Filename:   logFilePath,
+		MaxSize:    100, // MiB
+		MaxBackups: 20,
+		MaxAge:     14, // days
+		Compress:   true,
 	}
 
 	// Set log level

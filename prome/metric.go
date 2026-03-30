@@ -2,12 +2,14 @@ package prome
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"math"
 	"math/rand"
-	"sort"
+	"slices"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.uber.org/zap"
@@ -42,21 +44,8 @@ type MetricsItem struct {
 	sampleRate float32
 }
 
-// metricsItems is a collection of MetricsItem that implements sort.Interface
+// metricsItems is a collection of MetricsItem used for percentile calculations.
 type metricsItems []*MetricsItem
-
-// Len returns the number of items in the collection
-func (mi metricsItems) Len() int { return len(mi) }
-
-// Less compares two items by their CostTime for sorting
-func (mi metricsItems) Less(i, j int) bool {
-	return mi[i].CostTime < mi[j].CostTime
-}
-
-// Swap exchanges two items in the collection
-func (mi metricsItems) Swap(i, j int) {
-	mi[i], mi[j] = mi[j], mi[i]
-}
 
 // GetP90 returns the 90th percentile item from the sorted collection
 func (mi metricsItems) GetP90() *MetricsItem {
@@ -141,7 +130,7 @@ type MetricsInstance struct {
 	metricsMap       map[string][StatusMax]*MetricsGather
 	channel          chan *MetricsItem
 	lastTickerTime   int64
-	lastCollectTime  int64
+	lastCollectTime  atomic.Int64
 	lastMetricsInfos []MetricsInfo
 }
 
@@ -180,7 +169,7 @@ func (mInstance *MetricsInstance) GetMetricsInfo() []MetricsInfo {
 	mInstance.mu.RLock()
 	defer mInstance.mu.RUnlock()
 
-	mInstance.lastCollectTime = time.Now().UnixNano()
+	mInstance.lastCollectTime.Store(time.Now().UnixNano())
 	return mInstance.lastMetricsInfos
 }
 
@@ -199,9 +188,11 @@ func (mInstance *MetricsInstance) startLoop() {
 	}
 }
 
-// calcBucketIndex calculates the appropriate bucket index for a given cost in milliseconds
+// calcBucketIndex maps a cost in milliseconds to a bucket index.
+// Costs 1–50 ms map to buckets 0–49; costs 51–200 ms are grouped into
+// buckets 50–99 (3 ms per bucket); costs above 200 ms all fall into bucket 100.
 func calcBucketIndex(ms uint32) int {
-	if ms <= 0 {
+	if ms == 0 {
 		return 0
 	}
 	if ms <= 50 {
@@ -238,7 +229,7 @@ func (mInstance *MetricsInstance) tickerCollectInfos() {
 		}
 	}
 
-	if now-mInstance.lastCollectTime > 3*MetricsCollectInterval*int64(time.Second) {
+	if now-mInstance.lastCollectTime.Load() > 3*MetricsCollectInterval*int64(time.Second) {
 		go printStat(metricsInfos)
 	}
 
@@ -254,7 +245,9 @@ func (mInstance *MetricsInstance) collectGatherInfo(name string, status int8, ga
 	}
 
 	// Sort items for percentile calculations
-	sort.Sort(gather.items)
+	slices.SortFunc(gather.items, func(a, b *MetricsItem) int {
+		return cmp.Compare(a.CostTime, b.CostTime)
+	})
 
 	info := &MetricsInfo{
 		Total:      gather.total,
@@ -413,7 +406,7 @@ func (mi MapFI) MarshalJSON() ([]byte, error) {
 	for k := range mi {
 		keys = append(keys, k)
 	}
-	sort.Float64s(keys)
+	slices.Sort(keys)
 
 	for _, k := range keys {
 		v := mi[k]

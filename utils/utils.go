@@ -2,6 +2,7 @@ package utils
 
 import (
 	"strconv"
+	"strings"
 )
 
 // GetFloat32Param retrieves a float32 value from a string map with a default fallback
@@ -136,7 +137,9 @@ func GetBoolParam(param map[string]string, key string, defaultVal bool) bool {
 	return defaultVal
 }
 
-// GetStringSliceParam retrieves a string slice from a string map by splitting the value
+// GetStringSliceParam retrieves a string slice from a string map by splitting
+// the value on separator. If separator is empty the whole value is returned as
+// a single-element slice. Returns defaultVal when the key is not present.
 //
 // @param param: The string map containing parameters
 // @param key: The key to look up in the map
@@ -144,14 +147,12 @@ func GetBoolParam(param map[string]string, key string, defaultVal bool) bool {
 // @param defaultVal: The default value to return if key is not found
 // @return: The string slice or default value
 func GetStringSliceParam(param map[string]string, key string, separator string, defaultVal []string) []string {
-	if v, ok := param[key]; ok {
-		// Simple split implementation - you might want to use strings.Split
-		// and handle trimming based on your needs
-		if separator == "" {
-			return []string{v}
-		}
-		// This is a placeholder - implement proper splitting logic as needed
-		return []string{v} // Replace with actual split logic
+	v, ok := param[key]
+	if !ok {
+		return defaultVal
 	}
-	return defaultVal
+	if separator == "" {
+		return []string{v}
+	}
+	return strings.Split(v, separator)
 }

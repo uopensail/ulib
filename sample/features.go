@@ -2,38 +2,39 @@ package sample
 
 import (
 	"errors"
+	"fmt"
+	"iter"
 )
 
 var (
+	// ErrNotImplemented is returned by Feature getter methods that do not
+	// apply to the feature's actual type.
 	ErrNotImplemented = errors.New("method not implemented for this type")
-	ErrKeyNotFound    = errors.New("key not found")
-	ErrTypeMismatch   = errors.New("type mismatch")
-	ErrInvalidData    = errors.New("invalid data")
+	// ErrKeyNotFound is returned when a requested key is absent.
+	ErrKeyNotFound = errors.New("key not found")
+	// ErrTypeMismatch is returned when a type-safe getter is called on a
+	// feature whose stored type differs from the requested type.
+	ErrTypeMismatch = errors.New("type mismatch")
+	// ErrInvalidData indicates that stored data is corrupt or unreadable.
+	ErrInvalidData = errors.New("invalid data")
 )
 
-/**
- * @brief DataType represents the type of data stored in an ImmutableFeature
- *
- * Uses uint64 to ensure 8-byte alignment for optimal memory access.
- * Each stored value begins with a DataType field to enable type checking.
- */
+// DataType identifies the Go type held inside a Feature.
+// It is stored as the first 8 bytes of every arena-allocated value so that
+// the correct getter can be dispatched without a separate type field.
 type DataType uint64
 
 const (
-	Int64Type    DataType = iota // 64-bit signed integer
-	Float32Type                  // 32-bit floating point
-	StringType                   // UTF-8 string
-	Int64sType                   // Slice of 64-bit signed integers
-	Float32sType                 // Slice of 32-bit floating points
-	StringsType                  // Slice of UTF-8 strings
-	InvalidType  DataType = 127  // Invalid or uninitialized type
+	Int64Type    DataType = iota // int64
+	Float32Type                  // float32
+	StringType                   // string
+	Int64sType                   // []int64
+	Float32sType                 // []float32
+	StringsType                  // []string
+	InvalidType  DataType = 127  // uninitialized / unknown
 )
 
-/**
- * @brief String returns the string representation of DataType
- *
- * @return String name of the data type
- */
+// String returns the human-readable name of dt.
 func (dt DataType) String() string {
 	switch dt {
 	case Int64Type:
@@ -55,276 +56,119 @@ func (dt DataType) String() string {
 	}
 }
 
-/**
- * @brief IsValid checks if the DataType is a valid type
- *
- * @return True if the type is valid, false otherwise
- */
+// IsValid reports whether dt is a recognized scalar or slice type.
 func (dt DataType) IsValid() bool {
 	return dt >= Int64Type && dt <= StringsType
 }
 
-/**
- * @brief IsSliceType checks if the DataType represents a slice type
- *
- * @return True if the type is a slice type, false otherwise
- */
+// IsSliceType reports whether dt represents a slice value.
 func (dt DataType) IsSliceType() bool {
 	return dt == Int64sType || dt == Float32sType || dt == StringsType
 }
 
-/**
- * @brief Feature interface defines methods for accessing typed data values
- *
- * All feature implementations must provide type information and typed getter methods.
- * Type mismatches return errors to ensure type safety at runtime.
- *
- * The interface follows a consistent pattern where each getter method returns
- * the requested type and an error. Only the method corresponding to the feature's
- * actual type will succeed; all others return ErrNotImplemented.
- *
- * Safety Guidelines:
- * - Use safe methods (e.g., GetInt64) for type checking and error handling
- * - Use unsafe methods (e.g., GetInt64Unsafe) only when type is already verified
- * - Unsafe methods may panic or return garbage data if type doesn't match
- */
+// Feature holds a single strongly-typed value. The safe getter methods
+// (GetInt64, GetFloat32, …) return an error on type mismatch; the Unsafe
+// variants skip that check and must only be called after verifying Type().
 type Feature interface {
-	/**
-	 * @brief Returns the data type of this feature
-	 *
-	 * @return DataType enum value indicating the stored data type
-	 */
+	// Type returns the DataType of the stored value.
 	Type() DataType
 
-	/**
-	 * @brief Retrieves the stored value as int64
-	 *
-	 * @return The int64 value and nil error if type matches, otherwise ErrNotImplemented
-	 */
-	GetInt64() (int64, error)
+	// Get returns the value as any, using the native Go type.
+	Get() any
 
-	/**
-	 * @brief Retrieves the stored value as int64 without type checking
-	 *
-	 * Warning: This method does not perform type checking. Use only when type is verified.
-	 * @return The int64 value (undefined behavior if type doesn't match)
-	 */
+	GetInt64() (int64, error)
 	GetInt64Unsafe() int64
 
-	/**
-	 * @brief Retrieves the stored value as float32
-	 *
-	 * @return The float32 value and nil error if type matches, otherwise ErrNotImplemented
-	 */
 	GetFloat32() (float32, error)
-
-	/**
-	 * @brief Retrieves the stored value as float32 without type checking
-	 *
-	 * Warning: This method does not perform type checking. Use only when type is verified.
-	 * @return The float32 value (undefined behavior if type doesn't match)
-	 */
 	GetFloat32Unsafe() float32
 
-	/**
-	 * @brief Retrieves the stored value as string
-	 *
-	 * @return The string value and nil error if type matches, otherwise ErrNotImplemented
-	 */
 	GetString() (string, error)
-
-	/**
-	 * @brief Retrieves the stored value as string without type checking
-	 *
-	 * Warning: This method does not perform type checking. Use only when type is verified.
-	 * @return The string value (undefined behavior if type doesn't match)
-	 */
 	GetStringUnsafe() string
 
-	/**
-	 * @brief Retrieves the stored value as int64 slice
-	 *
-	 * @return The int64 slice and nil error if type matches, otherwise ErrNotImplemented
-	 */
 	GetInt64s() ([]int64, error)
-
-	/**
-	 * @brief Retrieves the stored value as int64 slice without type checking
-	 *
-	 * Warning: This method does not perform type checking. Use only when type is verified.
-	 * @return The int64 slice (undefined behavior if type doesn't match)
-	 */
 	GetInt64sUnsafe() []int64
 
-	/**
-	 * @brief Retrieves the stored value as float32 slice
-	 *
-	 * @return The float32 slice and nil error if type matches, otherwise ErrNotImplemented
-	 */
 	GetFloat32s() ([]float32, error)
-
-	/**
-	 * @brief Retrieves the stored value as float32 slice without type checking
-	 *
-	 * Warning: This method does not perform type checking. Use only when type is verified.
-	 * @return The float32 slice (undefined behavior if type doesn't match)
-	 */
 	GetFloat32sUnsafe() []float32
 
-	/**
-	 * @brief Retrieves the stored value as string slice
-	 *
-	 * @return The string slice and nil error if type matches, otherwise ErrNotImplemented
-	 */
 	GetStrings() ([]string, error)
-
-	/**
-	 * @brief Retrieves the stored value as string slice without type checking
-	 *
-	 * Warning: This method does not perform type checking. Use only when type is verified.
-	 * @return The string slice (undefined behavior if type doesn't match)
-	 */
 	GetStringsUnsafe() []string
-
-	/**
-	 * @brief Retrieves the stored value as any type
-	 *
-	 * This method returns the underlying value in its native Go type.
-	 * It's useful for generic processing or when the exact type is not known.
-	 *
-	 * @return The underlying value as any type
-	 */
-	Get() any
 }
 
-/**
- * @brief Features interface defines methods for managing collections of typed features
- *
- * This interface is implemented by both MutableFeatures and ImmutableFeatures,
- * providing a consistent API for feature collection operations. It supports
- * basic collection operations, serialization, and type-safe feature access.
- *
- * Key characteristics:
- * - Uniform API across mutable and immutable implementations
- * - Type-safe feature retrieval
- * - JSON serialization/deserialization support
- * - Efficient key-based access patterns
- * - Thread-safety depends on implementation (ImmutableFeatures is thread-safe)
- */
-type Features interface {
-
-	/**
-	 * @brief Gets the data type of a feature by key
-	 *
-	 * This is a convenience method that combines Get() and Type() calls.
-	 *
-	 * @param key Feature name
-	 * @return DataType of the feature, InvalidType if not found
-	 */
-	GetType(key string) DataType
-	/**
-	 * @brief Returns all feature keys in the collection
-	 *
-	 * The returned slice contains all feature keys currently in the collection.
-	 * The order of keys is not guaranteed and may vary between calls.
-	 *
-	 * @return Slice containing all feature keys (order not guaranteed)
-	 */
-	Keys() []string
-
-	/**
-	 * @brief Retrieves a feature by its key
-	 *
-	 * @param key The feature key to look up
-	 * @return Feature interface if found, nil if key doesn't exist
-	 */
-	Get(key string) Feature
-
-	/**
-	 * @brief Returns the number of features in the collection
-	 *
-	 * @return Count of features currently stored
-	 */
-	Len() int
-
-	/**
-	 * @brief Checks if a feature key exists in the collection
-	 *
-	 * This method is more efficient than calling Get() and checking for nil
-	 * when you only need to verify existence.
-	 *
-	 * @param key The feature key to check
-	 * @return True if key exists, false otherwise
-	 */
-	Has(key string) bool
-
-	/**
-	 * @brief Converts features to a map for serialization or inspection
-	 *
-	 * Each feature is converted to a structured format containing both
-	 * type information and the actual value. This method is useful for
-	 * debugging, logging, or custom serialization needs.
-	 *
-	 * The returned map structure for each feature:
-	 * {
-	 *   "type": DataType,
-	 *   "value": <actual_value>
-	 * }
-	 *
-	 * @return Map of feature names to structured values, error if conversion fails
-	 */
-	MapAny() (map[string]any, error)
-
-	/**
-	 * @brief Marshals the feature collection to JSON format
-	 *
-	 * The JSON format includes both type and value information for each feature,
-	 * enabling accurate reconstruction during unmarshaling. The format is
-	 * consistent between mutable and immutable implementations.
-	 *
-	 * Example JSON structure:
-	 * {
-	 *   "feature1": {"type": 0, "value": 123},
-	 *   "feature2": {"type": 2, "value": "hello"}
-	 * }
-	 *
-	 * @return JSON byte array and error if marshaling fails
-	 */
-	MarshalJSON() ([]byte, error)
-
-	/**
-	 * @brief Unmarshals feature collection from JSON format
-	 *
-	 * Reconstructs the feature collection from JSON data created by MarshalJSON.
-	 * The implementation handles type validation and creates appropriate
-	 * feature instances based on the type information in the JSON.
-	 *
-	 * Note: This method may modify the existing collection. For mutable features,
-	 * existing features may be overwritten. For immutable features, this typically
-	 * replaces the entire collection.
-	 *
-	 * @param data JSON byte array to unmarshal
-	 * @return Error if unmarshaling fails or data is invalid
-	 */
-	UnmarshalJSON(data []byte) error
-
-	/**
-	 * @brief Iterates over all features with a callback function
-	 *
-	 * The callback function is called for each feature in the collection.
-	 * If the callback returns an error, iteration stops and the error is returned.
-	 *
-	 * @param fn Callback function called for each feature
-	 * @return Error if callback returns error, nil if iteration completes
-	 */
-	ForEach(fn IteratorFunc) error
-}
-
-/**
- * @brief IteratorFunc defines the function signature for feature iteration
- *
- * @param key The feature key
- * @param feature The feature instance
- * @return Error to stop iteration, nil to continue
- */
+// IteratorFunc is the callback for Features.ForEach. Returning a non-nil
+// error stops iteration and causes ForEach to return that error.
 type IteratorFunc func(key string, feature Feature) error
+
+// Features is the common interface for both MutableFeatures and
+// ImmutableFeatures. Methods that iterate over the collection are available
+// in two forms:
+//
+//   - ForEach — callback-based, compatible with all Go versions.
+//   - All — returns an iter.Seq2 usable with range (Go 1.23+).
+type Features interface {
+	// GetType returns the DataType for key, or InvalidType if absent.
+	GetType(key string) DataType
+	// Keys returns all feature keys in unspecified order.
+	Keys() []string
+	// Get returns the Feature for key, or nil if absent.
+	Get(key string) Feature
+	// Len returns the number of features.
+	Len() int
+	// Has reports whether key exists.
+	Has(key string) bool
+	// MapAny converts each feature to a typed struct for serialization.
+	MapAny() (map[string]any, error)
+	// MarshalJSON encodes all features as JSON.
+	MarshalJSON() ([]byte, error)
+	// UnmarshalJSON decodes JSON produced by MarshalJSON.
+	UnmarshalJSON(data []byte) error
+	// ForEach calls fn for every key-feature pair. It stops on the first
+	// non-nil error returned by fn.
+	ForEach(fn IteratorFunc) error
+	// All returns an iterator over all key-feature pairs.
+	//
+	//  for key, f := range features.All() {
+	//      fmt.Println(key, f.Type())
+	//  }
+	All() iter.Seq2[string, Feature]
+}
+
+// featureToAny converts f to an anonymous struct with "type" and "value" JSON
+// fields. Both MutableFeatures.MapAny and ImmutableFeatures.MapAny delegate
+// here to avoid duplicating the type-switch.
+func featureToAny(f Feature) (any, error) {
+	switch f.Type() {
+	case Int64Type:
+		return struct {
+			Type  DataType `json:"type"`
+			Value int64    `json:"value"`
+		}{Int64Type, f.GetInt64Unsafe()}, nil
+	case Float32Type:
+		return struct {
+			Type  DataType `json:"type"`
+			Value float32  `json:"value"`
+		}{Float32Type, f.GetFloat32Unsafe()}, nil
+	case StringType:
+		return struct {
+			Type  DataType `json:"type"`
+			Value string   `json:"value"`
+		}{StringType, f.GetStringUnsafe()}, nil
+	case Int64sType:
+		return struct {
+			Type  DataType `json:"type"`
+			Value []int64  `json:"value"`
+		}{Int64sType, f.GetInt64sUnsafe()}, nil
+	case Float32sType:
+		return struct {
+			Type  DataType  `json:"type"`
+			Value []float32 `json:"value"`
+		}{Float32sType, f.GetFloat32sUnsafe()}, nil
+	case StringsType:
+		return struct {
+			Type  DataType `json:"type"`
+			Value []string `json:"value"`
+		}{StringsType, f.GetStringsUnsafe()}, nil
+	default:
+		return nil, fmt.Errorf("unknown data type %v", f.Type())
+	}
+}

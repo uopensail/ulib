@@ -6,148 +6,105 @@ import (
 )
 
 const (
-	pageSize    uintptr = 4096    // 4KB page size for memory allocation
-	maxPageSize uintptr = 1 << 30 // 1GB maximum allocation size
-	alignment   uintptr = 8       // 8-byte memory alignment
+	pageSize    uintptr = 4096    // 4 KiB – default OS page size
+	maxPageSize uintptr = 1 << 30 // 1 GiB hard cap per allocation
+	alignment   uintptr = 8       // all allocations are 8-byte aligned
 )
 
 var (
+	// ErrInvalidSize is returned when the requested allocation size is zero or
+	// exceeds maxPageSize.
 	ErrInvalidSize = errors.New("invalid allocation size")
+	// ErrOutOfMemory is returned when the arena cannot satisfy an allocation.
 	ErrOutOfMemory = errors.New("out of memory")
 )
 
-/**
- * @brief Arena is a memory pool allocator that manages memory in fixed-size pages
- *
- * The Arena allocator provides efficient memory allocation by pre-allocating
- * large chunks of memory (pages) and serving allocation requests from these pages.
- * It supports both small allocations (served from current page) and large
- * allocations (dedicated pages).
- *
- * Thread Safety: The Arena is thread-safe using read-write mutex protection.
- *
- * Memory Layout:
- * - Small allocations: Allocated sequentially from current page
- * - Large allocations: Get dedicated pages
- * - All allocations are 8-byte aligned for optimal performance
- */
+// Arena is a thread-safe bump-pointer allocator that manages memory in
+// fixed-size pages. It is designed to hold the binary representations used by
+// ImmutableFeature, reducing GC pressure by keeping feature data outside the
+// normal heap.
+//
+// Since Go 1.26 the Green Tea garbage collector greatly improves small-object
+// GC throughput, but the Arena remains useful because it enables zero-copy
+// string and slice access: strings and slices returned by ImmutableFeature
+// point directly into arena pages rather than owning separate heap blocks.
+//
+// Allocation strategy:
+//   - Requests ≤ pageSize are served from the current page. When the current
+//     page is full a fresh page is appended and becomes the new current page.
+//   - Requests > pageSize receive a dedicated page that is inserted just before
+//     the current page so the current page always remains at the tail.
+//
+// All allocations are aligned to 8 bytes for safe use with unsafe.Pointer casts.
 type Arena struct {
-	mu    sync.RWMutex // Read-write mutex for thread safety
-	pages [][]byte     // Collection of allocated memory pages
-	cur   uintptr      // Current offset in the last page
+	mu    sync.RWMutex
+	pages [][]byte // pages[len-1] is always the current small-allocation page
+	cur   uintptr  // next free byte offset within the current page
 }
 
-/**
- * @brief Creates a new Arena allocator with an initial page
- *
- * @return Pointer to the newly created Arena
- *
- * The Arena is initialized with:
- * - Empty pages slice with capacity for 8 pages
- * - One initial page of pageSize (4KB)
- * - Current offset set to 0
- */
+// NewArena returns a new Arena pre-warmed with one initial page.
 func NewArena() *Arena {
-	arena := &Arena{
-		pages: make([][]byte, 0, 8),
-		cur:   0,
-	}
-	arena.pages = append(arena.pages, make([]byte, pageSize))
-	return arena
+	a := &Arena{pages: make([][]byte, 0, 8)}
+	a.pages = append(a.pages, make([]byte, pageSize))
+	return a
 }
 
-/**
- * @brief Aligns size to 8-byte boundary for optimal memory access
- *
- * @param size The size to align
- * @return The aligned size (rounded up to next 8-byte boundary)
- *
- * Uses bit manipulation for efficient alignment:
- * (size + alignment - 1) & ^(alignment - 1)
- */
+// alignSize rounds size up to the next multiple of alignment (8 bytes).
 func alignSize(size uintptr) uintptr {
 	return (size + alignment - 1) &^ (alignment - 1)
 }
 
-/**
- * @brief Allocates aligned memory from the arena
- *
- * @param size Number of bytes to allocate
- * @return Slice of allocated bytes and error if allocation fails
- *
- * Allocation Strategy:
- * 1. Validate size (0 < size <= maxPageSize)
- * 2. Align size to 8-byte boundary
- * 3. For large allocations (> pageSize): create dedicated page
- * 4. For small allocations: try current page, create new page if needed
- *
- * Thread Safety: Protected by write lock during allocation
- */
-func (arena *Arena) allocate(size uintptr) ([]byte, error) {
+// allocate reserves size bytes from the arena and returns the slice.
+// The returned slice is valid for the lifetime of the Arena.
+func (a *Arena) allocate(size uintptr) ([]byte, error) {
 	if size == 0 || size > maxPageSize {
 		return nil, ErrInvalidSize
 	}
-
 	size = alignSize(size)
 
-	arena.mu.Lock()
-	defer arena.mu.Unlock()
+	a.mu.Lock()
+	defer a.mu.Unlock()
 
-	n := len(arena.pages)
+	n := len(a.pages)
 
-	// For large allocations, create a dedicated page
+	// Large allocations get a dedicated page inserted before the current page.
 	if size > pageSize {
-		newPage := make([]byte, size)
-		arena.pages = append(arena.pages, newPage)
-		// Move the new page to second-to-last position to keep current page last
-		arena.pages[n], arena.pages[n-1] = arena.pages[n-1], arena.pages[n]
-		return arena.pages[n-1], nil
+		large := make([]byte, size)
+		a.pages = append(a.pages, large)
+		// Swap new page with current page so current stays at the tail.
+		a.pages[n], a.pages[n-1] = a.pages[n-1], a.pages[n]
+		return a.pages[n-1], nil
 	}
 
-	// Ensure current position is aligned
-	arena.cur = alignSize(arena.cur)
-	remain := pageSize - arena.cur
-
-	if remain >= size {
-		// Allocate from current page
-		data := arena.pages[n-1][arena.cur : arena.cur+size]
-		arena.cur += size
+	// Ensure the cursor is aligned before measuring remaining space.
+	a.cur = alignSize(a.cur)
+	if pageSize-a.cur >= size {
+		// Fits in the current page.
+		data := a.pages[n-1][a.cur : a.cur+size]
+		a.cur += size
 		return data, nil
 	}
 
-	// Need a new page
-	arena.pages = append(arena.pages, make([]byte, pageSize))
-	arena.cur = size
-	return arena.pages[n][:size], nil
+	// Current page is full — append a fresh one.
+	a.pages = append(a.pages, make([]byte, pageSize))
+	a.cur = size
+	return a.pages[n][:size], nil // a.pages[n] is the newly appended page
 }
 
-/**
- * @brief Returns total allocated memory size across all pages
- *
- * @return Total memory size in bytes
- *
- * Thread Safety: Protected by read lock
- */
-func (arena *Arena) Size() uintptr {
-	arena.mu.RLock()
-	defer arena.mu.RUnlock()
-
+// Size returns the total number of bytes across all allocated pages.
+func (a *Arena) Size() uintptr {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
 	var total uintptr
-	for _, page := range arena.pages {
-		total += uintptr(len(page))
+	for _, p := range a.pages {
+		total += uintptr(len(p))
 	}
 	return total
 }
 
-/**
- * @brief Returns the number of pages currently allocated
- *
- * @return Number of pages
- *
- * Thread Safety: Protected by read lock
- */
-func (arena *Arena) PageCount() int {
-	arena.mu.RLock()
-	defer arena.mu.RUnlock()
-	return len(arena.pages)
+// PageCount returns the current number of pages held by the arena.
+func (a *Arena) PageCount() int {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return len(a.pages)
 }

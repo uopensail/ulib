@@ -4,13 +4,10 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
-	"math"
 	"os"
 	"path"
 	"path/filepath"
 )
-
-const filechunk = 8192 // 8KB chunks for file reading
 
 // FilePathExists checks if a file or directory exists at the given path
 //
@@ -105,10 +102,8 @@ func ListDir(dir string) ([]string, error) {
 	return ret, nil
 }
 
-// GetMD5 calculates the MD5 hash of a file
-//
-// @param filepath: Path to the file
-// @return: MD5 hash as hexadecimal string, empty string if error occurs
+// GetMD5 calculates the MD5 hash of a file, returning it as a hex string.
+// Returns an empty string if the file cannot be read.
 func GetMD5(filepath string) string {
 	file, err := os.Open(filepath)
 	if err != nil {
@@ -116,41 +111,10 @@ func GetMD5(filepath string) string {
 	}
 	defer file.Close()
 
-	// Calculate the file size
-	info, err := file.Stat()
-	if err != nil {
+	hash := md5.New()
+	if _, err := io.Copy(hash, file); err != nil {
 		return ""
 	}
-	filesize := info.Size()
-
-	// Handle empty files
-	if filesize == 0 {
-		hash := md5.New()
-		return fmt.Sprintf("%x", hash.Sum(nil))
-	}
-
-	blocks := uint64(math.Ceil(float64(filesize) / float64(filechunk)))
-	hash := md5.New()
-
-	for i := uint64(0); i < blocks; i++ {
-		blocksize := int(math.Min(filechunk, float64(filesize-int64(i*filechunk))))
-		buf := make([]byte, blocksize)
-
-		// Read chunk from file
-		n, err := file.Read(buf)
-		if err != nil && err != io.EOF {
-			return ""
-		}
-		if n == 0 {
-			break
-		}
-
-		// Write chunk to hash
-		if _, err := hash.Write(buf[:n]); err != nil {
-			return ""
-		}
-	}
-
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 

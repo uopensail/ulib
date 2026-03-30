@@ -5,73 +5,32 @@ import (
 	"net"
 )
 
-// GetLocalIp retrieves the first non-loopback IPv4 address of the local machine
-//
-// @return: Local IPv4 address as string and error if no suitable address found
-// @note: Returns the first valid non-loopback IPv4 address found
-func GetLocalIp() (string, error) {
+// GetLocalIP returns the first non-loopback IPv4 address of the local machine.
+func GetLocalIP() (string, error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return "", err
 	}
 
 	for _, iface := range ifaces {
-		// Skip interfaces that are down or loopback
-		if iface.Flags&net.FlagUp == 0 {
-			continue // interface down
+		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
+			continue
 		}
-		if iface.Flags&net.FlagLoopback != 0 {
-			continue // loopback interface
-		}
-
 		addrs, err := iface.Addrs()
 		if err != nil {
-			continue // Skip this interface if address retrieval fails
+			continue
 		}
-
 		for _, addr := range addrs {
-			ip := getIpFromAddr(addr)
-			if ip == nil {
-				continue
+			if ip := getIPFromAddr(addr); ip != nil {
+				return ip.String(), nil
 			}
-			return ip.String(), nil
 		}
 	}
-	return "", errors.New("no suitable IPv4 address found - check network connectivity")
+	return "", errors.New("no suitable IPv4 address found")
 }
 
-// getIpFromAddr extracts the IP address from a net.Addr interface
-// Filters out loopback and non-IPv4 addresses
-//
-// @param addr: Network address interface
-// @return: IPv4 address or nil if not valid
-func getIpFromAddr(addr net.Addr) net.IP {
-	var ip net.IP
-	switch v := addr.(type) {
-	case *net.IPNet:
-		ip = v.IP
-	case *net.IPAddr:
-		ip = v.IP
-	default:
-		return nil // Unsupported address type
-	}
-
-	if ip == nil || ip.IsLoopback() {
-		return nil
-	}
-
-	ip = ip.To4()
-	if ip == nil {
-		return nil // not an IPv4 address
-	}
-
-	return ip
-}
-
-// GetAllLocalIps retrieves all non-loopback IPv4 addresses of the local machine
-//
-// @return: Slice of local IPv4 addresses as strings and error if retrieval fails
-func GetAllLocalIps() ([]string, error) {
+// GetAllLocalIPs returns all non-loopback IPv4 addresses of the local machine.
+func GetAllLocalIPs() ([]string, error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return nil, err
@@ -79,21 +38,15 @@ func GetAllLocalIps() ([]string, error) {
 
 	var ips []string
 	for _, iface := range ifaces {
-		if iface.Flags&net.FlagUp == 0 {
-			continue // interface down
+		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
+			continue
 		}
-		if iface.Flags&net.FlagLoopback != 0 {
-			continue // loopback interface
-		}
-
 		addrs, err := iface.Addrs()
 		if err != nil {
-			continue // Skip this interface
+			continue
 		}
-
 		for _, addr := range addrs {
-			ip := getIpFromAddr(addr)
-			if ip != nil {
+			if ip := getIPFromAddr(addr); ip != nil {
 				ips = append(ips, ip.String())
 			}
 		}
@@ -105,16 +58,12 @@ func GetAllLocalIps() ([]string, error) {
 	return ips, nil
 }
 
-// GetLocalIpByInterface retrieves the IPv4 address of a specific network interface
-//
-// @param interfaceName: Name of the network interface (e.g., "eth0", "en0")
-// @return: IPv4 address as string and error if interface not found or no suitable address
-func GetLocalIpByInterface(interfaceName string) (string, error) {
+// GetLocalIPByInterface returns the IPv4 address of the named network interface.
+func GetLocalIPByInterface(interfaceName string) (string, error) {
 	iface, err := net.InterfaceByName(interfaceName)
 	if err != nil {
 		return "", err
 	}
-
 	if iface.Flags&net.FlagUp == 0 {
 		return "", errors.New("interface is down")
 	}
@@ -123,41 +72,45 @@ func GetLocalIpByInterface(interfaceName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	for _, addr := range addrs {
-		ip := getIpFromAddr(addr)
-		if ip != nil {
+		if ip := getIPFromAddr(addr); ip != nil {
 			return ip.String(), nil
 		}
 	}
-
 	return "", errors.New("no suitable IPv4 address found on interface " + interfaceName)
 }
 
-// IsValidIPv4 checks if a string is a valid IPv4 address
-//
-// @param ipStr: String to validate as IPv4
-// @return: true if valid IPv4, false otherwise
-func IsValidIPv4(ipStr string) bool {
-	ip := net.ParseIP(ipStr)
-	if ip == nil {
-		return false
-	}
-	return ip.To4() != nil
+// IsValidIPv4 reports whether s is a valid IPv4 address.
+func IsValidIPv4(s string) bool {
+	ip := net.ParseIP(s)
+	return ip != nil && ip.To4() != nil
 }
 
-// GetOutboundIP gets the preferred outbound IP address of this machine
-// by establishing a connection to a public DNS server
-//
-// @return: Outbound IPv4 address as string and error if connection fails
+// GetOutboundIP returns the preferred outbound IP of this machine by opening a
+// UDP socket toward 8.8.8.8 (no packet is actually sent).
 func GetOutboundIP() (string, error) {
-	// Using Google's public DNS server to determine outbound IP
 	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
 		return "", err
 	}
 	defer conn.Close()
+	return conn.LocalAddr().(*net.UDPAddr).IP.String(), nil
+}
 
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	return localAddr.IP.String(), nil
+// getIPFromAddr extracts an IPv4 address from addr, returning nil for loopback
+// or non-IPv4 addresses.
+func getIPFromAddr(addr net.Addr) net.IP {
+	var ip net.IP
+	switch v := addr.(type) {
+	case *net.IPNet:
+		ip = v.IP
+	case *net.IPAddr:
+		ip = v.IP
+	default:
+		return nil
+	}
+	if ip == nil || ip.IsLoopback() {
+		return nil
+	}
+	return ip.To4()
 }
